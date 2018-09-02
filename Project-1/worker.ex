@@ -18,9 +18,9 @@ defmodule Worker do
             for {k, n} <- task do
                 res ++ findSingleStartingNum(k, n)
             end
-        res
+        #res
         #IO.puts res
-        #returnResult(res)
+        returnResult(res)
     end
 
     def findSingleStartingNum(k, n) do
