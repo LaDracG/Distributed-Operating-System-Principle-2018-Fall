@@ -40,6 +40,7 @@ defmodule Boss do
 		if @start > n and @worker_list == [] do
 			for num <- @ans do
 				IO.puts num
+				stop()
 			end
 		else
 			scheduler(n, k)
