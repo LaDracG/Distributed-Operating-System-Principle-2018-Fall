@@ -1,4 +1,4 @@
-defmodule MixFile do
+defmodule Boss.MixFile do
 	use Mix.Project
 
 	def project do

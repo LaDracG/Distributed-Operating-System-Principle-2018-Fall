@@ -1,15 +1,27 @@
 defmodule Worker do
+    # TODO: Multi processes without duplicate names
+    #def init(name) do
     @name :worker
-    @result_list []
+    #end
+    #@result_list []
 
-    def fetchTask do 
-        send(Boss.pid, {self(), :fetch_task, []})
+    def fetchTask(boss_pid, is_new_process) do 
+        if is_new_process do
+            send(boss_pid, {self(), :fetch_task, []})    
+        end
         receive do
             {:ok, start_n, end_n, k} ->
-                @result_list = [] 
-                send(Boss.pid, {self(), :fetch_task, findSingleStartingNum(start_n, end_n, k)})
-                fetchTask()
-            :no_task -> IO.puts("Done") # no more tasks, do nothing 
+                #@result_list = [] 
+                #IO.puts "worker: " <> inspect(start_n) <> inspect(end_n) <> inspect(k)
+                #IO.puts "Result: " <> inspect(findSingleStartingNum(start_n, end_n, k))
+                res = findSingleStartingNum(start_n, end_n, k)
+                if res != [] do
+                    send(boss_pid, {self(), :fetch_task, res})
+                else
+                    send(boss_pid, {self(), :fetch_task, [nil]})
+                end
+                fetchTask(boss_pid, false)
+            {:no_task} -> stop() #IO.puts("Done") # no more tasks, do nothing 
         end
     end
 
@@ -84,9 +96,17 @@ defmodule Worker do
 
     def pid, do: Process.whereis(@name) 
 
-    def start do
-		pid = spawn(__MODULE__, :fetchTask, [])
-		Process.register(pid, @name)
+    def start(boss_pid) do
+        #init(name)
+		pid = spawn(__MODULE__, :fetchTask, [boss_pid, true])
+        pid
+        # Process.register(pid, @name) is to connect pid with a name such that we can use the name 
+        # as identifier in function send/2 instead of only pid.
+        # This registering is not necessary. So here we cancel it to avoid name conflict.
+        #Process.register(pid, @name)
+        
+        # Send an empty list to identify this is a new worker process
+        # send(boss_pid, {self(), :fetch_task, []})
 	end
 
 	def stop do
