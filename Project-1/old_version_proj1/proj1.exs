@@ -13,7 +13,7 @@ worker_list = []
 ans = []
 start = 1
 
-:observer.start()
+#:observer.start()
 
 Boss.start(n, k, worker_list, ans, start)
 
@@ -22,12 +22,13 @@ Boss.start(n, k, worker_list, ans, start)
 #end
 
 #IO.puts inspect Boss.pid()
-:timer.sleep(1000)
+#:timer.sleep(1000)
 #Worker.start(Boss.pid())
 #:timer.sleep(1000)
 #IO.puts inspect Boss.pid()
-processes = []
+#processes = []
 #IO.puts inspect processes
+"""
 processes = 
 	for i <- Enum.to_list(1..num_workers) do
 		#IO.puts inspect processes
@@ -38,7 +39,20 @@ processes =
 		processes ++ [pid]
 		#List.insert_at(processes, 0, pid)
 	end
-processes = processes ++ [[Boss.pid]]
+"""
+startWorkers = fn func, li_pid, n_workers -> 
+			if n_workers == 0 do
+				li_pid
+			else
+				pid = Worker.start(Boss.pid)
+				func.(func, li_pid ++ [pid], n_workers-1)
+			end
+		end
+
+processes = startWorkers.(startWorkers, [], num_workers)
+
+processes = processes ++ [Boss.pid]
+
 #IO.puts inspect processes
 
 Daemon.checkProcessAlive(processes)

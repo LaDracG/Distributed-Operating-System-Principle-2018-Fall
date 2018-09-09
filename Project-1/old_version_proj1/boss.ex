@@ -56,9 +56,9 @@ defmodule Boss do
 						start
 					end
 				#IO.puts inspect(worker_list)
-				IO.puts start
+				#IO.puts start
 				#IO.puts n
-				IO.puts inspect(ans)
+				#IO.puts inspect(ans)
 				#IO.puts "Test"
 				# Do not know why, but seems we cannot process too rapid. 
 				# When adding the printing command above, this works well;
@@ -67,13 +67,13 @@ defmodule Boss do
 				#:timer.sleep(1000) # Sleep for 500ms
 
 				if start > n and worker_list == [] do
-					IO.puts "Task Done. Results: "
+					#IO.puts "Task Done. Results: "
 					for num <- ans do
 						IO.puts num
 					end
 					stop()
 				else
-					IO.puts "Continue"
+					#IO.puts "Continue"
 					scheduler(n, k, worker_list, ans, start)
 				end
 
