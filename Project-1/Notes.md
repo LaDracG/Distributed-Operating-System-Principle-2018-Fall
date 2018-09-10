@@ -74,5 +74,7 @@ For example, if A \<-\> B, and there is a process a on A, process b on B. If we 
 
 (4) Node and Process are different abstracts. Process is more high-level. When we connect, disconnect and so on, we care about Node. When we do some computing tasks, send msg and so on, we care about Process and forget Node.
 
+(5) :global.sync()
 
+(6) Make work unit larger when using remote nodes since the bottleneck is networking communication speed now. So we should pass more data in each transporting.
 

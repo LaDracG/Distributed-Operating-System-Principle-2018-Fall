@@ -2,8 +2,8 @@ defmodule Boss do
 	# Do not try to use module attributes to record intermediate states
 	# Module attributes are immutable.
 	# So the better way is passing the states as parameters into the next function call. 
-	@name :boss
-	@work_unit 50
+	@name :boss_localhost
+	@work_unit 1000000
 	
 	def scheduler(n, k, worker_list, ans, start) do
 		receive do
@@ -78,7 +78,7 @@ defmodule Boss do
 		
 	end
 
-	def pid, do: Process.whereis(@name)
+	#def pid, do: Process.whereis(@name)
 
 	def printAns do
 		send(self(), :print_ans)
@@ -86,12 +86,15 @@ defmodule Boss do
 
 	def start(n, k, worker_list, ans, start) do
 		pid = spawn(__MODULE__, :scheduler, [n, k, worker_list, ans, start])
-		Process.register(pid, @name)
+		#Process.register(pid, @name)
+		:global.register_name(@name, pid)
+		pid
 	end
 
 	def stop do
-		Process.exit(pid(), :normal)
-		Process.unregister(@name)
+		#Process.exit(pid(), :normal)
+		#Process.unregister(@name)
+		:global.unregister_name(@name)
 	end
 
 end
