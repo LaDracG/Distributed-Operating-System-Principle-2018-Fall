@@ -1,0 +1,73 @@
+warning: the VM is running with native name encoding of latin1 which may cause Elixir to malfunction as it expects utf8. Please ensure your locale is set to UTF-8 (which can be verified by running "locale" in your shell)
+warning: variable "monitor_pid" is unused
+  proj1.exs:11
+
+New connections from [:"boss@127.0.0.1"]; Current connections: [:"boss@127.0.0.1"]
+[:boss_localhost, :worker_104_129_184_63]
+Get msg from #PID<14862.140.0>: num_workers -- 5
+Worker Processes: [#PID<0.135.0>, #PID<0.136.0>, #PID<0.137.0>, #PID<0.138.0>, #PID<0.139.0>]
+Connections ended from [:"boss@127.0.0.1"]; Current connections: []
+New connections from [:"boss@127.0.0.1"]; Current connections: [:"boss@127.0.0.1"]
+[:worker_104_129_184_63]
+Get msg from #PID<14862.135.0>: num_workers -- 5
+Worker Processes: [#PID<0.149.0>, #PID<0.150.0>, #PID<0.151.0>, #PID<0.152.0>, #PID<0.153.0>]
+New connections from [:"worker@23.106.134.177"]; Current connections: [:"boss@127.0.0.1", :"worker@23.106.134.177"]
+[:worker_23_106_134_177, :boss_localhost, :worker_104_129_184_63]
+Connections ended from [:"boss@127.0.0.1"]; Current connections: [:"worker@23.106.134.177"]
+New connections from [:"boss@127.0.0.1"]; Current connections: [:"worker@23.106.134.177", :"boss@127.0.0.1"]
+[:worker_23_106_134_177, :worker_104_129_184_63]
+Get msg from #PID<14862.145.0>: num_workers -- 17
+Worker Processes: [#PID<0.164.0>, #PID<0.165.0>, #PID<0.166.0>, #PID<0.167.0>, #PID<0.168.0>, #PID<0.169.0>, #PID<0.170.0>, #PID<0.171.0>, #PID<0.172.0>, #PID<0.173.0>, #PID<0.174.0>, #PID<0.175.0>, #PID<0.176.0>, #PID<0.177.0>, #PID<0.178.0>, #PID<0.179.0>, #PID<0.180.0>]
+Connections ended from [:"boss@127.0.0.1"]; Current connections: [:"worker@23.106.134.177"]
+No respond from boss within 5s, stop worker process.
+No respond from boss within 5s, stop worker process.
+No respond from boss within 5s, stop worker process.
+No respond from boss within 5s, stop worker process.
+No respond from boss within 5s, stop worker process.
+No respond from boss within 5s, stop worker process.
+No respond from boss within 5s, stop worker process.
+No respond from boss within 5s, stop worker process.
+No respond from boss within 5s, stop worker process.
+No respond from boss within 5s, stop worker process.
+No respond from boss within 5s, stop worker process.
+No respond from boss within 5s, stop worker process.
+No respond from boss within 5s, stop worker process.
+No respond from boss within 5s, stop worker process.
+No respond from boss within 5s, stop worker process.
+No respond from boss within 5s, stop worker process.
+No respond from boss within 5s, stop worker process.
+New connections from [:"boss@127.0.0.1"]; Current connections: [:"worker@23.106.134.177", :"boss@127.0.0.1"]
+[:worker_23_106_134_177, :worker_104_129_184_63]
+Get msg from #PID<14862.136.0>: num_workers -- 17
+Worker Processes: [#PID<0.186.0>, #PID<0.187.0>, #PID<0.188.0>, #PID<0.189.0>, #PID<0.190.0>, #PID<0.191.0>, #PID<0.192.0>, #PID<0.193.0>, #PID<0.194.0>, #PID<0.195.0>, #PID<0.196.0>, #PID<0.197.0>, #PID<0.198.0>, #PID<0.199.0>, #PID<0.200.0>, #PID<0.201.0>, #PID<0.202.0>]
+Connections ended from [:"boss@127.0.0.1"]; Current connections: [:"worker@23.106.134.177"]
+New connections from [:"boss@127.0.0.1"]; Current connections: [:"worker@23.106.134.177", :"boss@127.0.0.1"]
+[:worker_23_106_134_177, :worker_104_129_184_63]
+Get msg from #PID<14862.145.0>: num_workers -- 5
+Worker Processes: [#PID<0.208.0>, #PID<0.209.0>, #PID<0.210.0>, #PID<0.211.0>, #PID<0.212.0>]
+Connections ended from [:"boss@127.0.0.1"]; Current connections: [:"worker@23.106.134.177"]
+New connections from [:"boss@127.0.0.1"]; Current connections: [:"worker@23.106.134.177", :"boss@127.0.0.1"]
+[:worker_23_106_134_177, :worker_104_129_184_63]
+Get msg from #PID<14862.136.0>: num_workers -- 17
+Worker Processes: [#PID<0.218.0>, #PID<0.219.0>, #PID<0.220.0>, #PID<0.221.0>, #PID<0.222.0>, #PID<0.223.0>, #PID<0.224.0>, #PID<0.225.0>, #PID<0.226.0>, #PID<0.227.0>, #PID<0.228.0>, #PID<0.229.0>, #PID<0.230.0>, #PID<0.231.0>, #PID<0.232.0>, #PID<0.233.0>, #PID<0.234.0>]
+Connections ended from [:"boss@127.0.0.1"]; Current connections: [:"worker@23.106.134.177"]
+New connections from [:"boss@127.0.0.1"]; Current connections: [:"worker@23.106.134.177", :"boss@127.0.0.1"]
+[:worker_23_106_134_177, :worker_104_129_184_63]
+Get msg from #PID<14862.136.0>: num_workers -- 8
+Worker Processes: [#PID<0.240.0>, #PID<0.241.0>, #PID<0.242.0>, #PID<0.243.0>, #PID<0.244.0>, #PID<0.245.0>, #PID<0.246.0>, #PID<0.247.0>]
+Connections ended from [:"boss@127.0.0.1"]; Current connections: [:"worker@23.106.134.177"]
+New connections from [:"boss@127.0.0.1"]; Current connections: [:"worker@23.106.134.177", :"boss@127.0.0.1"]
+[:worker_23_106_134_177, :worker_104_129_184_63]
+Get msg from #PID<14862.145.0>: num_workers -- 17
+Worker Processes: [#PID<0.253.0>, #PID<0.254.0>, #PID<0.255.0>, #PID<0.256.0>, #PID<0.257.0>, #PID<0.258.0>, #PID<0.259.0>, #PID<0.260.0>, #PID<0.261.0>, #PID<0.262.0>, #PID<0.263.0>, #PID<0.264.0>, #PID<0.265.0>, #PID<0.266.0>, #PID<0.267.0>, #PID<0.268.0>, #PID<0.269.0>]
+Connections ended from [:"boss@127.0.0.1"]; Current connections: [:"worker@23.106.134.177"]
+New connections from [:"boss@127.0.0.1"]; Current connections: [:"worker@23.106.134.177", :"boss@127.0.0.1"]
+[:worker_23_106_134_177, :worker_104_129_184_63]
+Get msg from #PID<14862.145.0>: num_workers -- 17
+Worker Processes: [#PID<0.275.0>, #PID<0.276.0>, #PID<0.277.0>, #PID<0.278.0>, #PID<0.279.0>, #PID<0.280.0>, #PID<0.281.0>, #PID<0.282.0>, #PID<0.283.0>, #PID<0.284.0>, #PID<0.285.0>, #PID<0.286.0>, #PID<0.287.0>, #PID<0.288.0>, #PID<0.289.0>, #PID<0.290.0>, #PID<0.291.0>]
+Connections ended from [:"boss@127.0.0.1"]; Current connections: [:"worker@23.106.134.177"]
+New connections from [:"boss@127.0.0.1"]; Current connections: [:"worker@23.106.134.177", :"boss@127.0.0.1"]
+[:worker_23_106_134_177, :worker_104_129_184_63]
+Get msg from #PID<14862.136.0>: num_workers -- 17
+Worker Processes: [#PID<0.297.0>, #PID<0.298.0>, #PID<0.299.0>, #PID<0.300.0>, #PID<0.301.0>, #PID<0.302.0>, #PID<0.303.0>, #PID<0.304.0>, #PID<0.305.0>, #PID<0.306.0>, #PID<0.307.0>, #PID<0.308.0>, #PID<0.309.0>, #PID<0.310.0>, #PID<0.311.0>, #PID<0.312.0>, #PID<0.313.0>]
+Connections ended from [:"boss@127.0.0.1"]; Current connections: [:"worker@23.106.134.177"]
