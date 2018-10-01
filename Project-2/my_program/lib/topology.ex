@@ -33,10 +33,11 @@ defmodule Topology do
         Enum.random(neighbors)
     end
 
+    # return: a list of lists of neighbor node indices (0-based).
+    #         the first list is neighbor node indices of the first node,
+    #         the second list is neighbor node indices of the second node ...
     def computeAllNeighbors(num_nodes, topology_type) do
-        @doc "return: a list of lists of neighbor node indices (0-based).
-                      the first list is neighbor node indices of the first node,
-                      the second list is neighbor node indices of the second node ..."
+
         @topology_dict[topology_type].computeAllNeighbors(num_nodes)
     end
 end

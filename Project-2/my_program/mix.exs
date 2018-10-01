@@ -28,7 +28,10 @@ defmodule MyProgram.MixProject do
   end
 
   defp escript do
-    [main_module: Project2.CLI]
+    [
+      main_module: Project2.CLI
+      #strip_beam: false
+    ]
   end
 
 end

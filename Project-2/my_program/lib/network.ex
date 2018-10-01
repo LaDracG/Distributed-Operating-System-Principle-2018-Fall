@@ -30,21 +30,22 @@ defmodule Network do
   end
   """
 
-  def mapIndicesToPids(all_neighbor_lists, node_pids, map_output) do
-    if node_pids == [] do
+  def mapIndicesToPids(cur_node_idx, all_neighbor_lists, node_pids, map_output) do
+    if cur_node_idx == length(node_pids) do
       map_output
     else
-      cur_node_pid = hd(node_pids)
-      cur_neighbor_indices = hd(all_neighbor_lists)
-
-      cur_neighbor_pids = Enum.map(cur_neighbor_indices, fn node_idx -> node_pids[node_idx] end)
-
+      cur_node_pid = Enum.at(node_pids, cur_node_idx)
+      cur_neighbor_indices = Enum.at(all_neighbor_lists, cur_node_idx)
+      #IO.puts inspect(node_pids)
+      #IO.puts inspect(node_pids[1])
+      cur_neighbor_pids = Enum.map(cur_neighbor_indices, fn node_idx -> Enum.at(node_pids, node_idx) end)
+      #IO.puts inspect(cur_neighbor_pids)
       map_output = Map.put(map_output, cur_node_pid, cur_neighbor_pids)
 
-      node_pids = node_pids -- [cur_node_pid]
-      all_neighbor_lists = all_neighbor_lists -- [cur_neighbor_indices]
+      #node_pids = node_pids -- [cur_node_pid]
+      #all_neighbor_lists = all_neighbor_lists -- [cur_neighbor_indices]
 
-      mapIndicesToPids(all_neighbor_lists, node_pids, map_output)
+      mapIndicesToPids(cur_node_idx + 1, all_neighbor_lists, node_pids, map_output)
     end
   end
 
@@ -57,21 +58,21 @@ defmodule Network do
     end
   end
 
+  # assignAllNeighbors - Compute and assign neighbor lists to all nodes
   def assignAllNeighbors(node_pids, topology_type) do
-    @doc "Compute and assign neighbor lists to all nodes"
-
     # here all_neighbor_lists is a list of lists
     all_neighbor_lists = Topology.computeAllNeighbors(length(node_pids), topology_type)
+    #IO.puts inspect(all_neighbor_lists)
     # here all_neighbor_lists is a map where each key is a node pid
     # and value is a list of pids of neighbors of the node
-    all_neighbor_lists = mapIndicesToPids(all_neighbor_lists, node_pids, %{})
+    all_neighbor_lists = mapIndicesToPids(0, all_neighbor_lists, node_pids, %{})
     for {node_pid, neighbor_list} <- all_neighbor_lists do
       assignNeighbors(node_pid, neighbor_list)
     end
   end
 
+  # assignNeighbors - Assign neighbor list to specific node with node_pid
   def assignNeighbors(node_pid, neighbors) do
-    @doc "Assign neighbor list to specific node with node_pid"
     send(node_pid, {self(), :assign_neighbors, neighbors})
   end
 
@@ -88,7 +89,7 @@ defmodule Network do
 
 
   def startPropgation(start_node_pid) do
-
+    # TODO
   end
 
   def main(num_nodes, topology_type) do
@@ -98,7 +99,7 @@ defmodule Network do
     # TODO
   end
 
-  def start() do
+  def start(num_nodes, topology_type) do
     spawn(__MODULE__, :main, [num_nodes, topology_type])
   end
 
@@ -120,7 +121,7 @@ defmodule NetWork.Node do
 
   def listen(boss_pid, topology_type, neighbors) do
     # TODO
-    IO.puts inspect(self()) <> " " <> inspect(neighbors) <> " " <> IO.puts inspect(Topology.getNeighbor(topology_type))
+    IO.puts inspect(self()) <> " " <> inspect(neighbors) <> " " <> inspect(Topology.getNeighbor(neighbors))
     reportFinish(boss_pid)
   end
 
