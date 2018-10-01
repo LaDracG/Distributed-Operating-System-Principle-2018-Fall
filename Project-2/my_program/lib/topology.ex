@@ -41,7 +41,7 @@ defmodule Topology do
     #         the first list is neighbor node indices of the first node,
     #         the second list is neighbor node indices of the second node ...
     def computeAllNeighbors(num_nodes, topology_type) do
-
+        #IO.puts inspect(@topology_dict[topology_type])
         @topology_dict[topology_type].computeAllNeighbors(num_nodes)
     end
 end
@@ -91,9 +91,24 @@ defmodule Topology.Random2DGrid do
     #def getNeighbor() do
     #    IO.puts "Random2DGrid"
     #end
+    def distance(p1, p2) do
+        :math.sqrt(:math.pow(p1[:x] - p2[:x], 2) + :math.pow(p1[:y] - p2[:y], 2))
+    end
 
     def computeAllNeighbors(num_nodes) do
-
+        #IO.puts "1"
+        points = Enum.map(Enum.to_list(0..num_nodes-1), fn node_idx -> %{:x=>:rand.uniform(), :y=>:rand.uniform(), :node_idx=>node_idx} end)
+        #IO.puts "2"
+        points = Enum.map(
+            points,
+            fn p ->
+                Enum.map(Enum.filter(points -- [p], fn p2 -> distance(p, p2) < 0.1 end), fn p2 -> p2[:node_idx] end)
+            end
+        )
+        #IO.puts "3"
+        #IO.puts inspect(points)
+        points
+        #nodes = Enum.map(points, fn p -> p[:node_idx] end)
     end
 end
 

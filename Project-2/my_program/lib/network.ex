@@ -62,7 +62,9 @@ defmodule Network do
   # assignAllNeighbors - Compute and assign neighbor lists to all nodes
   def assignAllNeighbors(node_pids, topology_type) do
     # here all_neighbor_lists is a list of lists
+    #IO.puts "here"
     all_neighbor_lists = Topology.computeAllNeighbors(length(node_pids), topology_type)
+    #IO.puts "there"
     #IO.puts inspect(all_neighbor_lists)
     # here all_neighbor_lists is a map where each key is a node pid
     # and value is a list of pids of neighbors of the node
@@ -127,10 +129,15 @@ defmodule Network do
 
   def main(num_nodes, topology_type, alg) do
     node_pids = startNodes(num_nodes, topology_type, alg, [])
+    #IO.puts inspect(node_pids)
     assignAllNeighbors(node_pids, topology_type)
     waitNodesInitilized(node_pids)
     startPropgation(node_pids)
+
+    start_time = Time.utc_now()
     waitNodesFinish(node_pids)
+    end_time = Time.utc_now()
+    IO.puts inspect(Time.diff(end_time, start_time, :microsecond)/1000) <> "ms"
     #IO.puts "================ END of Network ===================="
   end
 
@@ -244,7 +251,7 @@ defmodule NetWork.Node do
           else # normal
             state = Map.replace!(state, :s, state[:s] + msg[:s])#.replace!(state, :w, state[:w] + msg[:w])
             state = Map.replace!(state, :w, state[:w] + msg[:w])
-            if abs(state[:ratio] - state[:s] / state[:w]) <= :math.pow(10, -5) do
+            if abs(state[:ratio] - state[:s] / state[:w]) <= :math.pow(10, -3) do
               state = Map.replace!(state, :unchange_rounds, state[:unchange_rounds] + 1)#.replace!(state, :ratio, state[:s] / state[:w])
               state = Map.replace!(state, :ratio, state[:s] / state[:w])
               next_neib = Topology.getNeighbor(state[:neighbors])

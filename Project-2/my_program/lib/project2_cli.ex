@@ -27,12 +27,9 @@ defmodule Project2.CLI do
           IO.puts "[Error] Invalid topology: " <> topology_type
         else
           #Network.startNodes()
-          start_time = Time.utc_now()
           net_pid = Network.start(num_nodes, topology_type, alg)
           waitNetworkFinish(net_pid)
-          end_time = Time.utc_now()
           #IO.puts inspect(start_time) <> " " <> inspect(end_time)
-          IO.puts inspect(Time.diff(end_time, start_time, :microsecond)/1000) <> "ms"
         end
       end
     end
