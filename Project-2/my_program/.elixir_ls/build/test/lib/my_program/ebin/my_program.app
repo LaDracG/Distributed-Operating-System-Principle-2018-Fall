@@ -1,0 +1,11 @@
+{application,my_program,
+             [{applications,[kernel,stdlib,elixir,logger]},
+              {description,"my_program"},
+              {modules,['Elixir.MyProgram','Elixir.Project2.CLI',
+                        'Elixir.Topology','Elixir.Topology.FullNetwork',
+                        'Elixir.Topology.ImperfectLine',
+                        'Elixir.Topology.Line','Elixir.Topology.Random2DGrid',
+                        'Elixir.Topology.Sphere',
+                        'Elixir.Topology.ThreeDimGrid']},
+              {registered,[]},
+              {vsn,"0.1.0"}]}.
