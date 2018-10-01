@@ -1,15 +1,46 @@
 defmodule Project2.CLI do
+  @topology_dict %{"full" => Topology.FullNetwork,
+            "3D" => Topology.ThreeDimGrid,
+            "rand2D" => Topology.Random2DGrid,
+            "sphere" => Topology.Sphere,
+            "line" => Topology.Line,
+            "imp2D" => Topology.ImperfectLine
+    }
+  @alg_dict %{
+      "gossip" => 0,
+      "push-sum" => 1
+    }
+
   def main(args \\ []) do
     {opts, words, _} =
       OptionParser.parse(args, switches: [])
     #IO.puts inspect(word)
-    [num_nodes, topology_type, algorithm] = words
+    [num_nodes, topology_type, alg] = words
     {num_nodes, _} = Integer.parse(num_nodes)
-    Network.start(num_nodes, topology_type)
-    loop()
+    if num_nodes <= 1 do
+      IO.puts "[Error] The number of nodes must be larger than 1"
+    else
+      if @alg_dict[alg] == nil do
+        IO.puts "[Error] Invalid algorithm: " <> alg
+      else
+        if @topology_dict[topology_type] == nil do
+          IO.puts "[Error] Invalid topology: " <> topology_type
+        else
+          #Network.startNodes()
+          start_time = Time.utc_now()
+          net_pid = Network.start(num_nodes, topology_type, alg)
+          waitNetworkFinish(net_pid)
+          end_time = Time.utc_now()
+          #IO.puts inspect(start_time) <> " " <> inspect(end_time)
+          IO.puts inspect(Time.diff(end_time, start_time, :microsecond)/1000) <> "ms"
+        end
+      end
+    end
   end
 
-  def loop() do
-    loop()
+  def waitNetworkFinish(net_pid) do
+    if Process.alive?(net_pid) do
+      waitNetworkFinish(net_pid)
+    end
   end
 end

@@ -4,6 +4,7 @@ defmodule Network do
         (Network process would not maintain neghbor lists, they are maintained by nodes themselves)
         When all above done, Network chooses a node to start propagation.
       "
+ # use GenServer
   """
   @topology_dict %{"full" => Topology.FullNetwork,
       "3D" => Topology.ThreeDimGrid,
@@ -49,12 +50,12 @@ defmodule Network do
     end
   end
 
-  def startNodes(num_nodes, topology_type, node_pids) do
+  def startNodes(num_nodes, topology_type, alg, node_pids) do
     if num_nodes == 0 do
       node_pids
     else
-      pid = NetWork.Node.start(self(), topology_type)
-      startNodes(num_nodes - 1, topology_type, node_pids ++ [pid])
+      pid = NetWork.Node.start(self(), topology_type, alg, [num_nodes])
+      startNodes(num_nodes - 1, topology_type, alg, node_pids ++ [pid])
     end
   end
 
@@ -73,8 +74,14 @@ defmodule Network do
 
   # assignNeighbors - Assign neighbor list to specific node with node_pid
   def assignNeighbors(node_pid, neighbors) do
-    send(node_pid, {self(), :assign_neighbors, neighbors})
+    #send(node_pid, {self(), :assign_neighbors, neighbors})
+    GenServer.cast(node_pid, {:setNeighbors, neighbors})
   end
+
+  #def handle_call(:markNodeInit, node_pid, map_pids) do
+  #  map_pids = Map.replace!(map_pids, "uninit_node_pids", map_pids["uninit_node_pids"] -- [node_pid])
+  #  {:no_reply, map_pids}
+  #end
 
   def waitNodesInitilized(uninit_node_pids) do
     if uninit_node_pids == [] do
@@ -88,25 +95,60 @@ defmodule Network do
   end
 
 
-  def startPropgation(start_node_pid) do
-    # TODO
+  def startPropgation(node_pids) do
+    if node_pids == [] do
+      {:no_alive_pid, nil}
+    else
+      start_node_pid = Enum.random(node_pids)
+      status = GenServer.call(start_node_pid, :startPropgation)
+      if status != :ok do # starting failed
+        startPropgation(node_pids -- [start_node_pid])
+      else
+        {:ok, start_node_pid}
+      end
+    end
   end
 
-  def main(num_nodes, topology_type) do
-    node_pids = startNodes(num_nodes, topology_type, [])
+  def waitNodesFinish(node_pids) do
+    if node_pids != [] do
+      receive do
+        {node_pid, :finish} ->
+          #new_start_node = Enum.random(node_pids -- [node_pid])
+          {status, start_node_pid} = startPropgation(node_pids -- [node_pid])
+          if status == :ok do
+            IO.puts "[Network] " <> inspect(node_pid) <> " finish; Restart Prop on " <> inspect(start_node_pid)
+            waitNodesFinish(node_pids -- [node_pid])
+          else
+            # do nothing
+          end
+      end
+    end
+  end
+
+  def main(num_nodes, topology_type, alg) do
+    node_pids = startNodes(num_nodes, topology_type, alg, [])
     assignAllNeighbors(node_pids, topology_type)
     waitNodesInitilized(node_pids)
-    # TODO
+    startPropgation(node_pids)
+    waitNodesFinish(node_pids)
+    #IO.puts "================ END of Network ===================="
   end
 
-  def start(num_nodes, topology_type) do
-    spawn(__MODULE__, :main, [num_nodes, topology_type])
+  def start(num_nodes, topology_type, alg) do
+    #GenServer.start_link(__MODULE__, node_pids)
+    spawn(__MODULE__, :main, [num_nodes, topology_type, alg])
   end
+
+  #def init(node_pids) do
+  #  {:ok, %{"node_pids"=>node_pids, "uninit_node_pids"=>node_pids}}
+  #end
 
 end
 
 
 defmodule NetWork.Node do
+  use GenServer
+  """
   def setNeighbors() do
     receive do
       {boss_pid, :assign_neighbors, neighbors} ->
@@ -114,17 +156,156 @@ defmodule NetWork.Node do
         neighbors
     end
   end
+  """
+  def handle_cast({:setNeighbors, neighbors}, state) do
+    state = Map.replace!(state, :neighbors, neighbors)
+    #state = Map.replace!(state, :neighbors, neighbors)
+    send(state[:boss_pid], {self(), :init})
+    IO.puts inspect(self()) <> " sets neighbors"
+    {:noreply, state}
+  end
 
+  """
   def reportFinish(boss_pid) do
     send(boss_pid, {self(), :finish})
   end
+  """
+  #def handle_call(:getState, from, state) do
+  #  {:reply, state, state}
+  #end
 
+  #def getState() do
+  #  GenServer.call(self(), :getState)
+  #end
+
+  def handle_cast({:removeNeighbor, neighbor_pid}, state) do
+    state = Map.replace!(state, :neighbors, state[:neighbors] -- [neighbor_pid])
+    if state[:neighbors] == [] do
+      state = Map.replace!(state, :finish, true)
+      send(state[:boss_pid], {self(), :finish})
+      #IO.puts inspect(self()) <> " neighbors: " <> inspect(state[:neighbors])
+      IO.puts inspect(self()) <> " Finished because no neighbors"
+      {:noreply, state}
+    else
+      #IO.puts inspect(self()) <> " neighbors: " <> inspect(state[:neighbors])
+      {:noreply, state}
+    end
+  end
+
+  #def removeNeighbor(neighbor_pid) do
+  #  GenServer.cast(self(), {:removeNeighbor, neighbor_pid})
+  #end
+
+  def handle_cast({:receiveMsg, msg}, state) do
+      IO.puts inspect(self()) <> "receiveMsg" #<> inspect(from)
+      if state[:alg] == "gossip" do
+        if state[:finish] == false do
+          if state[:count] >= state[:max_count] do
+            # Do nothing, no longer transmit msg
+            #IO.puts inspect(self()) <> " Finished because done"
+            for neighbor_pid <- state[:neighbors] do
+              #IO.puts inspect(self()) <> " start cast for removeNeighbor to " <> inspect(neighbor_pid)
+              GenServer.cast(neighbor_pid, {:removeNeighbor, self()})
+              #IO.puts inspect(self()) <> " end cast for removeNeighbor to " <> inspect(neighbor_pid)
+            end
+            state = Map.replace!(state, :finish, true)
+            state = Map.replace!(state, :neighbors, [])
+            send(state[:boss_pid], {self(), :finish})
+            {:noreply, state}
+          else # normal
+            state = Map.replace!(state, :count, state[:count] + 1)
+            next_neib = Topology.getNeighbor(state[:neighbors])
+            #if next_neib != nil do
+            GenServer.cast(next_neib, {:receiveMsg, "_"})
+            #else
+            #end
+            {:noreply, state}
+          end
+        else
+          #IO.puts inspect(self()) <> " gossip count: " <> inspect(state[:count])
+          {:noreply, state}
+        end
+      else # push-sum
+        if state[:finish] == false do
+          if state[:unchange_rounds] >= 3 do
+            # Do nothing, no longer transmit msg
+            #IO.puts inspect(self()) <> " Finished because done"
+            for neighbor_pid <- state[:neighbors] do
+              #IO.puts inspect(self()) <> " start cast for removeNeighbor"
+              GenServer.cast(neighbor_pid, {:removeNeighbor, self()})
+              #IO.puts inspect(self()) <> " end cast for removeNeighbor"
+            end
+            state = Map.replace!(state, :finish, true)
+            state = Map.replace!(state, :neighbors, [])
+            send(state[:boss_pid], {self(), :finish})
+            #state = Map.replace!(state, :finish, true)
+            # terminate here
+            {:noreply, state}
+          else # normal
+            state = Map.replace!(state, :s, state[:s] + msg[:s])#.replace!(state, :w, state[:w] + msg[:w])
+            state = Map.replace!(state, :w, state[:w] + msg[:w])
+            if abs(state[:ratio] - state[:s] / state[:w]) <= :math.pow(10, -5) do
+              state = Map.replace!(state, :unchange_rounds, state[:unchange_rounds] + 1)#.replace!(state, :ratio, state[:s] / state[:w])
+              state = Map.replace!(state, :ratio, state[:s] / state[:w])
+              next_neib = Topology.getNeighbor(state[:neighbors])
+              sendMsg(next_neib)
+              {:noreply, state}
+            else
+              state = Map.replace!(state, :unchange_rounds, 0)#.replace!(state, :ratio, state[:s] / state[:w])
+              state = Map.replace!(state, :ratio, state[:s] / state[:w])
+              next_neib = Topology.getNeighbor(state[:neighbors])
+              sendMsg(next_neib)
+              {:noreply, state}
+            end
+          end
+        else
+          {:noreply, state}
+        end
+      end
+  end
+
+  def handle_cast({:sendMsg, neighbor_pid}, state) do
+    #state = getState()
+    #IO.puts inspect(self()) <> "sendMsg to " <> inspect(neighbor_pid)
+    alg = state[:alg]
+    if state[:alg] == "gossip" do
+      msg = "_"
+      #IO.puts inspect(self()) <> " start cast for receiveMsg"
+      GenServer.cast(neighbor_pid, {:receiveMsg, msg})
+      #IO.puts inspect(self()) <> " end cast for receiveMsg"
+      {:noreply, state}
+    else # push-sum
+      msg = %{:s => 0.5 * state[:s], :w => 0.5 * state[:w]}
+      GenServer.cast(neighbor_pid, {:receiveMsg, msg})
+      state = Map.replace!(state, :s, 0.5 * state[:s])
+      state = Map.replace!(state, :w, 0.5 * state[:w])
+      {:noreply, state}
+    end
+  end
+
+  def sendMsg(neighbor_pid) do
+    #IO.puts inspect(self()) <> " start cast for sendMsg"
+    GenServer.cast(self(), {:sendMsg, neighbor_pid})
+    #IO.puts inspect(self()) <> " end cast for sendMsg"
+  end
+
+  def handle_call(:startPropgation, from, state) do
+    if state[:neighbors] == [] do
+      {:reply, :no_neighbors, state}
+    else
+      neib = Topology.getNeighbor(state[:neighbors])
+      sendMsg(neib)
+      {:reply, :ok, state}
+    end
+  end
+  """
   def listen(boss_pid, topology_type, neighbors) do
     # TODO
     IO.puts inspect(self()) <> " " <> inspect(neighbors) <> " " <> inspect(Topology.getNeighbor(neighbors))
     reportFinish(boss_pid)
   end
-
+  """
+  """
   def main(boss_pid, topology_type, neighbors) do
     #send(boss_pid, {self(), :started})
     if neighbors == [] do
@@ -135,8 +316,47 @@ defmodule NetWork.Node do
       #main(boss_pid, topology_type, neighbors)
     end
   end
+  """
+  def start(boss_pid, topology_type, alg, args) do
+    if alg == "gossip" do
+      {:ok, pid} = GenServer.start_link(
+                        __MODULE__,
+                        %{
+                            :topology_type=>topology_type,
+                            :alg=>alg,
+                            :boss_pid=>boss_pid,
+                            :neighbors=>[],
+                            :count=>0,
+                            :max_count=>10,
+                            :finish=>false
+                        }
+                    )
+      pid
+    else
+      {:ok, pid} = GenServer.start_link(
+                      __MODULE__,
+                      %{
+                        :topology_type=>topology_type,
+                        :alg=>alg,
+                        :boss_pid=>boss_pid,
+                        :neighbors=>[],
+                        :s=>Enum.at(args, 0),
+                        :w=>1,
+                        :unchange_rounds=>0,
+                        :ratio=>Enum.at(args, 0),
+                        :finish=>false
+                     }
+                   )
+      pid
+    end
+  end
 
+  def init(state) do
+    {:ok, state}
+  end
+  """
   def start(boss_pid, topology_type) do
 		spawn(__MODULE__, :main, [boss_pid, topology_type, []])
   end
+  """
 end

@@ -30,7 +30,11 @@ defmodule Topology do
             """
         #end
         #@topology_dict[topology_type].getNeighbor()
+        #if neighbors == [] do
+        #    nil
+        #else
         Enum.random(neighbors)
+        #end
     end
 
     # return: a list of lists of neighbor node indices (0-based).
@@ -57,8 +61,29 @@ defmodule Topology.ThreeDimGrid do
     #    IO.puts "ThreeDimGrid"
     #end
 
-    def computeAllNeighbors(num_nodes) do
 
+    def mod(x,y) do
+        cond do
+            x > 0 -> rem(x, y)
+            x < 0 -> y + rem(x, y)
+            x == 0 -> 0
+        end
+    end
+
+    def computeAllNeighbors(num_nodes) do
+        Enum.map(Enum.to_list(0..num_nodes-1), fn node_idx ->
+                                                    Enum.filter(
+                                                        [
+                                                            trunc(node_idx / 4) * 4 + mod(node_idx - 1, 4),
+                                                            trunc(node_idx / 4) * 4 + mod(node_idx + 1, 4),
+                                                            node_idx + 4,
+                                                            node_idx - 4
+                                                        ],
+                                                        fn neighbor_idx -> neighbor_idx < num_nodes and neighbor_idx >= 0 end
+                                                    )
+                                                end
+
+        )
     end
 end
 
@@ -88,7 +113,18 @@ defmodule Topology.Line do
     #end
 
     def computeAllNeighbors(num_nodes) do
-
+        Enum.map(Enum.to_list(0..num_nodes-1), fn node_idx ->
+                                                    if node_idx - 1 < 0 do
+                                                        [node_idx + 1]
+                                                    else
+                                                        if node_idx + 1 > num_nodes - 1 do
+                                                            [node_idx - 1]
+                                                        else
+                                                            [node_idx - 1, node_idx + 1]
+                                                        end
+                                                    end
+                                                end
+                )
     end
 end
 
@@ -98,6 +134,18 @@ defmodule Topology.ImperfectLine do
     #end
 
     def computeAllNeighbors(num_nodes) do
-
+        Enum.map(
+            Enum.to_list(0..num_nodes-1),
+            fn node_idx ->
+                Enum.filter(
+                    [
+                        node_idx - 1,
+                        node_idx + 1,
+                        Enum.random(Enum.to_list(0..num_nodes-1) -- [node_idx, node_idx - 1, node_idx + 1])
+                    ],
+                    fn neighbor_idx -> neighbor_idx >= 0 and neighbor_idx < num_nodes end
+                )
+            end
+        )
     end
 end
