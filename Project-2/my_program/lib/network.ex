@@ -111,22 +111,29 @@ defmodule Network do
     end
   end
 
-  def waitNodesFinish(node_pids) do
-    if node_pids != [] do
-      receive do
-        {node_pid, :finish} ->
-          #new_start_node = Enum.random(node_pids -- [node_pid])
-          {status, start_node_pid} = startPropgation(node_pids -- [node_pid])
-          if status == :ok do
-            IO.puts "[Network] " <> inspect(node_pid) <> " finish; Restart Prop on " <> inspect(start_node_pid)
-            waitNodesFinish(node_pids -- [node_pid])
-          else
-            # do nothing
-          end
+  def waitNodesFinish(node_pids, last_node, same_count, max_same_node_count) do
+    if max_same_node_count == same_count do
+      # do nothing
+    else
+      if node_pids != [] do
+        receive do
+          {node_pid, :finish} ->
+              {status, start_node_pid} = startPropgation(node_pids -- [node_pid])
+              if status == :ok do
+                #IO.puts "[Network] " <> inspect(node_pid) <> " finish; Restart Prop on " <> inspect(start_node_pid)
+                cond do
+                  last_node == nil ->
+                    waitNodesFinish(node_pids -- [node_pid], node_pid, 0, max_same_node_count)
+                  node_pid == last_node ->
+                    waitNodesFinish(node_pids -- [node_pid], node_pid, same_count + 1, max_same_node_count)
+                  node_pid != last_node and last_node != nil ->
+                    waitNodesFinish(node_pids -- [node_pid], last_node, same_count, max_same_node_count)
+                end
+              end
+        end
       end
     end
   end
-
   def main(num_nodes, topology_type, alg) do
     node_pids = startNodes(num_nodes, topology_type, alg, [])
     #IO.puts inspect(node_pids)
@@ -135,7 +142,7 @@ defmodule Network do
     startPropgation(node_pids)
 
     start_time = Time.utc_now()
-    waitNodesFinish(node_pids)
+    waitNodesFinish(node_pids, nil, 0, 5)
     end_time = Time.utc_now()
     IO.puts inspect(Time.diff(end_time, start_time, :microsecond)/1000) <> "ms"
     #IO.puts "================ END of Network ===================="
@@ -168,7 +175,7 @@ defmodule NetWork.Node do
     state = Map.replace!(state, :neighbors, neighbors)
     #state = Map.replace!(state, :neighbors, neighbors)
     send(state[:boss_pid], {self(), :init})
-    IO.puts inspect(self()) <> " sets neighbors"
+    #IO.puts inspect(self()) <> " sets neighbors"
     {:noreply, state}
   end
 
@@ -191,7 +198,7 @@ defmodule NetWork.Node do
       state = Map.replace!(state, :finish, true)
       send(state[:boss_pid], {self(), :finish})
       #IO.puts inspect(self()) <> " neighbors: " <> inspect(state[:neighbors])
-      IO.puts inspect(self()) <> " Finished because no neighbors"
+      #IO.puts inspect(self()) <> " Finished because no neighbors"
       {:noreply, state}
     else
       #IO.puts inspect(self()) <> " neighbors: " <> inspect(state[:neighbors])
@@ -204,7 +211,7 @@ defmodule NetWork.Node do
   #end
 
   def handle_cast({:receiveMsg, msg}, state) do
-      IO.puts inspect(self()) <> "receiveMsg" #<> inspect(from)
+      #IO.puts inspect(self()) <> "receiveMsg" #<> inspect(from)
       if state[:alg] == "gossip" do
         if state[:finish] == false do
           if state[:count] >= state[:max_count] do
@@ -229,6 +236,7 @@ defmodule NetWork.Node do
             {:noreply, state}
           end
         else
+          send(state[:boss_pid], {self(), :finish})
           #IO.puts inspect(self()) <> " gossip count: " <> inspect(state[:count])
           {:noreply, state}
         end
@@ -266,6 +274,7 @@ defmodule NetWork.Node do
             end
           end
         else
+          send(state[:boss_pid], {self(), :finish})
           {:noreply, state}
         end
       end

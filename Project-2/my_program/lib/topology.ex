@@ -56,7 +56,7 @@ defmodule Topology.FullNetwork do
     end
 end
 
-defmodule Topology.ThreeDimGrid do
+defmodule Topology.Sphere do
     #def getNeighbor() do
     #    IO.puts "ThreeDimGrid"
     #end
@@ -72,17 +72,16 @@ defmodule Topology.ThreeDimGrid do
 
     def computeAllNeighbors(num_nodes) do
         Enum.map(Enum.to_list(0..num_nodes-1), fn node_idx ->
-                                                    Enum.filter(
-                                                        [
-                                                            trunc(node_idx / 4) * 4 + mod(node_idx - 1, 4),
-                                                            trunc(node_idx / 4) * 4 + mod(node_idx + 1, 4),
-                                                            node_idx + 4,
-                                                            node_idx - 4
-                                                        ],
-                                                        fn neighbor_idx -> neighbor_idx < num_nodes and neighbor_idx >= 0 end
-                                                    )
-                                                end
-
+                Enum.filter(
+                    [
+                        trunc(node_idx / 4) * 4 + mod(node_idx - 1, 4),
+                        trunc(node_idx / 4) * 4 + mod(node_idx + 1, 4),
+                        node_idx + 4,
+                        node_idx - 4
+                    ],
+                fn neighbor_idx -> neighbor_idx < num_nodes and neighbor_idx >= 0 end
+            )
+            end
         )
     end
 end
@@ -112,13 +111,36 @@ defmodule Topology.Random2DGrid do
     end
 end
 
-defmodule Topology.Sphere do
+defmodule Topology.ThreeDimGrid do
     #def getNeighbor() do
     #    IO.puts "Sphere"
     #end
 
-    def computeAllNeighbors(num_nodes) do
+    def mod(x,y) do
+        cond do
+            x > 0 -> rem(x, y)
+            x < 0 -> y + rem(x, y)
+            x == 0 -> 0
+        end
+    end
 
+    def computeAllNeighbors(num_nodes) do
+        num_each_edge = trunc(:math.ceil(:math.pow(num_nodes, 1/3)))
+        num_each_layer = num_each_edge * num_each_edge
+        Enum.map(Enum.to_list(0..num_nodes-1), fn node_idx ->
+                Enum.filter(
+                    [
+                        trunc(node_idx / num_each_layer) * num_each_layer + mod(node_idx - 1, num_each_layer),
+                        trunc(node_idx / num_each_layer) * num_each_layer + mod(node_idx + 1, num_each_layer),
+                        trunc(node_idx / num_each_layer) * num_each_layer + mod(node_idx - num_each_edge, num_each_layer),
+                        trunc(node_idx / num_each_layer) * num_each_layer + mod(node_idx + num_each_edge, num_each_layer),
+                        node_idx + num_each_layer,
+                        node_idx - num_each_layer,
+                    ],
+                fn neighbor_idx -> neighbor_idx < num_nodes and neighbor_idx >= 0 end
+                )
+            end
+        )
     end
 end
 
@@ -147,20 +169,44 @@ defmodule Topology.ImperfectLine do
     #def getNeighbor() do
     #    IO.puts "ImperfectLine"
     #end
-
+    def mod(x,y) do
+        cond do
+            x > 0 -> rem(x, y)
+            x < 0 -> y + rem(x, y)
+            x == 0 -> 0
+        end
+    end
     def computeAllNeighbors(num_nodes) do
+        """
         Enum.map(
             Enum.to_list(0..num_nodes-1),
             fn node_idx ->
-                Enum.filter(
+                Enum.uniq(Enum.filter(
                     [
                         node_idx - 1,
                         node_idx + 1,
-                        Enum.random(Enum.to_list(0..num_nodes-1) -- [node_idx, node_idx - 1, node_idx + 1])
+                        node_idx + 2
+                        #Enum.random(Enum.to_list(0..num_nodes-1))
+                        #mod(node_idx + :rand.uniform(num_nodes-1), num_nodes)
                     ],
-                    fn neighbor_idx -> neighbor_idx >= 0 and neighbor_idx < num_nodes end
-                )
+                    fn neighbor_idx -> neighbor_idx >= 0 and neighbor_idx < num_nodes and neighbor_idx != node_idx end
+                ))
             end
         )
+        """
+
+        Enum.map(Enum.to_list(0..num_nodes-1), fn node_idx ->
+                if node_idx - 1 < 0 do
+                    [node_idx + 1, Enum.random(Enum.to_list(0..num_nodes-1) -- [node_idx, node_idx+1])]
+                else
+                    if node_idx + 1 > num_nodes - 1 do
+                        [node_idx - 1, Enum.random(Enum.to_list(0..num_nodes-1) -- [node_idx, node_idx-1])]
+                    else
+                        [node_idx - 1, node_idx + 1, Enum.random(Enum.to_list(0..num_nodes-1) -- [node_idx, node_idx-1, node_idx+1])]
+                    end
+                end
+            end
+        )
+
     end
 end
