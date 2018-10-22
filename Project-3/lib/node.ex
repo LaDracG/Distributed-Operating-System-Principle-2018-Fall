@@ -14,12 +14,12 @@ defmodule node do
 		GenServer.cast(self(), {:join, npid})
 	end
 
-	def find_succesor() do
+	def find_succesor(id) do
 		GenServer.call(self(), {:find_suc, id})
 	end
 
-	def closest_preceding_node(fpid, id) do
-		GenServer.call{:find_pre, id}, fpid)
+	def closest_preceding_node(id) do
+		GenServer.call(self(), {:find_pre, id})
 	end
 
 	def fix_fingers(fpid) do
@@ -54,4 +54,10 @@ defmodule node do
 	end
 
 	def handle_call({:find_suc, id}, _from, state) do
-		if (id > state[:key_n] and )
+		if (id > state[:key_n] and id < state[:succesor]) do
+			{:reply, state[:succesor], state}
+		else do
+			np = closest_preceding_node(id)
+			# (np.find_succesor(id))
+		end
+	end
