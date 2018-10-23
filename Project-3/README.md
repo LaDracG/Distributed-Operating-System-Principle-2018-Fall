@@ -1,6 +1,10 @@
 # Project3
 
-**TODO: Add description**
+## Team Members
+Yifan Wang, Jingyang Guo
+
+## Descriptions
+The module Algorithm manages the request process
 
 ## Installation
 

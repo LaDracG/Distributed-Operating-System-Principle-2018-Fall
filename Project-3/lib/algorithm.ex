@@ -1,8 +1,10 @@
 defmodule Algorithm do
+	"""
 	def getSuccesor(ids) do
 		pid = Enum.at(ids, 1)
 		Enum.at(GenServer.call(pid, :getSucc), 0)
 	end
+	"""
 
 	def logicLarger(id_a, id_b, cid, num_nodes) do
 		l_id_a = if id_a < cid do
@@ -15,29 +17,52 @@ defmodule Algorithm do
 				else
 					id_b
 				end
-		if l_id_a > l_id_b do
+		if l_id_a >= l_id_b do
 			True
 		else
 			False
 		end
 	end
 
+<<<<<<< HEAD
 	#id: target id; cid: current node's id
 	def routingRequests(ids, cids, finger_table) do
 		num_nodes = :math.pow(2, length(finger_table))
 		id = Enum.at(ids, 0)
 		cid = Enum.at(cids, 0)
+=======
+	#tid: target id; cid: current node's id
+	def routingRequests(tid, cid, cid_succ_withPid, finger_table) do
+		num_nodes = :math.pow(2, length(finger_table))
+		
+		"""
+		############
+>>>>>>> f6631a207680a1519605a58be57a7a91ba3a930a
 		for i <- 0..length(finger_table) - 1 do
 			tmp_id = Enum.at(Enum.at(finger_table, i), 0)
 			if tmp_id == getSuccesor(ids) do
 				{:found, Enum.at(finger_table, i)}
 			else
-				if logicLarger(tmp_id, id, cid, num_nodes) do
+				if logicLarger(tmp_id, tid, cid, num_nodes) do
 					{:not_found, Enum.at(finger_table, i - 1)}
 				else
 					if i == length(finger_table) - 1 do
 						{:not_found, Enum.at(finger_table, i)}
 					end
+				end
+			end
+		end
+		############
+		"""
+
+		cid_succ = Enum.at(cid_succ_withPid, 0)
+		if logicLarger(cid_succ, tid, cid, num_nodes) and logicLarger(tid, cid, cid, num_nodes) do
+			{:found, cid_succ_withPid}
+		else
+			for i <- (length(finger_table) - 1)..0 do
+				tmp_id = Enum.at(Enum.at(finger_table, i), 0)
+				if logicLarger(tid, tmp_id, cid, num_nodes) do
+					{:not_found, Enum.at(finger_table, i)}
 				end
 			end
 		end
