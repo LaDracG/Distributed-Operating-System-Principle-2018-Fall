@@ -84,22 +84,72 @@ defmodule Peer do
     {:reply, Map.get(state, :counter_pid), state}
   end
 
-  def handle_cast({:startAllRequests, num_reqs}, from, state) do
-    requestAll(num_reqs)
+  def handle_cast({:requestAll, num_reqs}, state) do
+    IO.puts "Start all requests in node"
+    #requestAll(num_reqs)
+    IO.puts "requestAll()"
+    if num_reqs > 0 do
+      :timer.sleep(500)
+      IO.puts "1"
+      finger_table = Map.get(state, :finger_table)
+      m = length(finger_table)
+      num_total = trunc(:math.pow(2, m))
+      target_id = :rand.uniform(num_total) - 1
+      IO.puts "2"
+      GenServer.cast(self(), {:requestOnce, target_id})
+      IO.puts "3"
+      GenServer.cast(self(), {:requestAll, num_reqs - 1})
+    else
+      counter_pid = Map.get(state, :counter_pid)
+      self_id = Map.get(state, :id)
+      send(counter_pid, {:finish, self_id, self()})
+    end
     {:noreply, state}
   end
 
   def handle_cast({:requestOnce, target_id}, state) do
-    requestOnce(target_id)
+    #requestOnce(target_id)
+    self_state = state
+    self_id = Map.get(self_state, :id)
+    self_succ = Map.get(self_state, :successor)
+    finger_table = Map.get(self_state, :finger_table)
+    counter_pid = Map.get(self_state, :counter_pid)
+    #{status, next_id_pid} =
+    res = Algorithm.routingRequests(target_id, self_id, self_succ, finger_table)
+    if res != nil do
+      status = Enum.at(res, 0)
+      next_id_pid = Enum.at(res, 1)
+      IO.puts "id: " <> inspect(self_id) <> " -- Request once"
+      if status == :not_found do
+        GenServer.cast(Enum.at(next_id_pid, 1), {:requestOnce, target_id})
+      end
+      send(counter_pid, {:oneConnection})
+    end
+    {:noreply, state}
+  end
+  """
+  def handle_cast(:getState, state) do
+    send(self(), {:state, state})
     {:noreply, state}
   end
 
+  def getState() do
+    GenServer.cast(self(), :getState)
+    receive do
+      {:state, state} ->
+        state
+    end
+  end
+  """
+  """
   def requestOnce(target_id) do
-    self_id = GenServer.call(self(), :getId)
-    self_succ = GenServer.call(self(), :getSucc)
-    finger_table = GenServer.call(self(), :getFintb)
-    counter_pid = GenServer.call(self(), :getCounterPid)
+    self_state = getState()
+    self_id = Map.get(self_state, :id)
+    self_succ = Map.get(self_state, :successor)
+    finger_table = Map.get(self_state, :finger_table)
+    counter_pid = Map.get(self_state, :counter_pid)
     {status, next_id_pid} = Algorithm.routingRequests(target_id, self_id, self_succ, finger_table)
+    IO.puts "id: " <> inspect(self_id) <> " -- Request once"
     if status == :not_found do
       GenServer.cast(Enum.at(next_id_pid, 1), {:requestOnce, target_id})
     end
@@ -107,18 +157,23 @@ defmodule Peer do
   end
 
   def requestAll(num_reqs) do
+    IO.puts "requestAll()"
     if num_reqs > 0 do
-      :timer.sleep(1000)
-      finger_table = GenServer.call(self(), :getFintb)
+      #:timer.sleep(1000)
+      IO.puts "1"
+      finger_table = Map.get(getState(), :finger_table)
       m = length(finger_table)
       num_total = trunc(:math.pow(2, m))
       target_id = :rand.uniform(num_total) - 1
+      IO.puts "2"
       requestOnce(target_id)
+      IO.puts "3"
       requestAll(num_reqs - 1)
     else
-      counter_pid = GenServer.call(self(), :getCounterPid)
-      self_id = GenServer.call(self(), :getId)
+      counter_pid = Map.get(getState(), :counter_pid)
+      self_id = Map.get(getState(), :id)
       send(counter_pid, {:finish, self_id, self()})
     end
   end
+  """
 end

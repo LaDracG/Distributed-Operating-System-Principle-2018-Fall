@@ -18,16 +18,16 @@ defmodule Algorithm do
 					id_b
 				end
 		if l_id_a >= l_id_b do
-			True
+			true
 		else
-			False
+			false
 		end
 	end
 
 	#tid: target id; cid: current node's id
 	def routingRequests(tid, cid, cid_succ_withPid, finger_table) do
 		num_nodes = :math.pow(2, length(finger_table))
-		
+
 		"""
 		for i <- 0..length(finger_table) - 1 do
 			tmp_id = Enum.at(Enum.at(finger_table, i), 0)
@@ -47,13 +47,19 @@ defmodule Algorithm do
 
 		cid_succ = Enum.at(cid_succ_withPid, 0)
 		if logicLarger(cid_succ, tid, cid, num_nodes) and logicLarger(tid, cid, cid, num_nodes) do
-			{:found, cid_succ_withPid}
+			[:found, cid_succ_withPid]
 		else
-			for i <- (length(finger_table) - 1)..0 do
-				tmp_id = Enum.at(Enum.at(finger_table, i), 0)
-				if logicLarger(tid, tmp_id, cid, num_nodes) do
-					{:not_found, Enum.at(finger_table, i)}
-				end
+			helper(tid, cid, num_nodes, finger_table, length(finger_table) - 1)
+		end
+	end
+
+	def helper(tid, cid, num_nodes, finger_table, i) do
+		if i >= 0 do
+			tmp_id = Enum.at(Enum.at(finger_table, i), 0)
+			if logicLarger(tid, tmp_id, cid, num_nodes) do
+				[:not_found, Enum.at(finger_table, i)]
+			else
+				helper(tid, cid, num_nodes, finger_table, i-1)
 			end
 		end
 	end

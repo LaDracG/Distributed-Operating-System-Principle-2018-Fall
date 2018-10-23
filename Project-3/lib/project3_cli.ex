@@ -10,7 +10,7 @@ defmodule Project3.CLI do
     if num_nodes < 3 do
       IO.puts "The number of peers cannot be less than 3!"
     else
-      pids = Manager.start(self(), num_nodes)
+      pids = Manager.start(self(), num_nodes, num_reqs)
       countConnections(0, 0, num_nodes)
     end
   end

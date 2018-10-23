@@ -1,11 +1,13 @@
 defmodule Manager do
-  def main(counter_pid, num_peers) do
+  def main(counter_pid, num_peers, num_reqs) do
     len_tb = trunc(:math.ceil(:math.log2(num_peers)))
     num_total = trunc(:math.pow(2, len_tb))
     #IO.puts "total: " <> inspect(num_total) <> " peers: " <> inspect(num_peers)
     types = Enum.shuffle(List.duplicate(1, num_peers) ++ List.duplicate(0, num_total - num_peers))
     pids = startAllPeers(counter_pid, 0, types, [])
-    #IO.puts inspect(pids)
+    IO.puts "Start all nodes"
+    IO.puts inspect(pids)
+    IO.puts "Assign attributes"
     assignAttrs(0, pids, len_tb)
     #IO.puts inspect(pids)
     #for i <- Enum.to_list(1..num_total) do
@@ -13,11 +15,12 @@ defmodule Manager do
     #  pid = Enum.at(Enum.at(pids, i-1), 1)
     #  IO.puts "id: " <> inspect(id) <> " type: " <> inspect(getType(id, pids)) <> " Pred: " <> inspect(closestPred(id, pids)) <> " Succ: " <> inspect(findSucc(id, pids)) <> " FinTB: " <> inspect(getFintb(id, pids))
     #end
-    startAllRequests(pids)
+    IO.puts "Start requesting"
+    startAllRequests(pids, num_reqs)
   end
 
-  def start(counter_pid, num_peers) do
-    spawn(__MODULE__, :main, [counter_pid, num_peers])
+  def start(counter_pid, num_peers, num_reqs) do
+    spawn(__MODULE__, :main, [counter_pid, num_peers, num_reqs])
   end
 
   def startAllPeers(counter_pid, cur_id, types, pids) do
@@ -41,11 +44,14 @@ defmodule Manager do
     end
   end
 
-  def startAllRequests(pids) do
+  def startAllRequests(pids, num_reqs) do
     if pids != [] do
       pid = Enum.at(hd(pids), 1)
-      GenServer.cast(pid, :startAllRequests)
-      startAllRequests(tl(pids))
+      type = GenServer.call(pid, :getType)
+      if type == 1 do
+        GenServer.cast(pid, {:requestAll, num_reqs})
+      end
+      startAllRequests(tl(pids), num_reqs)
     end
   end
 
