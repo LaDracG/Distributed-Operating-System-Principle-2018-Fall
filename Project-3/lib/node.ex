@@ -85,19 +85,19 @@ defmodule Peer do
   end
 
   def handle_cast({:requestAll, num_reqs}, state) do
-    IO.puts "Start all requests in node"
+    #IO.puts "Start all requests in node"
     #requestAll(num_reqs)
-    IO.puts "requestAll()"
+    #IO.puts "requestAll()"
     if num_reqs > 0 do
-      :timer.sleep(500)
-      IO.puts "1"
+      :timer.sleep(1000)
+      #IO.puts "1"
       finger_table = Map.get(state, :finger_table)
       m = length(finger_table)
       num_total = trunc(:math.pow(2, m))
       target_id = :rand.uniform(num_total) - 1
-      IO.puts "2"
+      #IO.puts "2"
       GenServer.cast(self(), {:requestOnce, target_id})
-      IO.puts "3"
+      #IO.puts "3"
       GenServer.cast(self(), {:requestAll, num_reqs - 1})
     else
       counter_pid = Map.get(state, :counter_pid)
@@ -119,7 +119,7 @@ defmodule Peer do
     if res != nil do
       status = Enum.at(res, 0)
       next_id_pid = Enum.at(res, 1)
-      IO.puts "id: " <> inspect(self_id) <> " -- Request once"
+      #IO.puts "id: " <> inspect(self_id) <> " -- Request once"
       if status == :not_found do
         GenServer.cast(Enum.at(next_id_pid, 1), {:requestOnce, target_id})
       end

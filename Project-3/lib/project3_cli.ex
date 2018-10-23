@@ -6,27 +6,30 @@ defmodule Project3.CLI do
     [num_nodes, num_reqs] = words
     {num_nodes, _} = Integer.parse(num_nodes)
     {num_reqs, _} = Integer.parse(num_reqs)
-    IO.puts inspect(num_nodes) <> " " <> inspect(num_reqs)
+    #IO.puts inspect(num_nodes) <> " " <> inspect(num_reqs)
     if num_nodes < 3 do
       IO.puts "The number of peers cannot be less than 3!"
     else
       pids = Manager.start(self(), num_nodes, num_reqs)
-      countConnections(0, 0, num_nodes)
+      count = countConnections(0, 0, num_nodes)
+      IO.puts inspect(count / (num_nodes * num_reqs))
     end
   end
 
   def countConnections(count, num_finish, num_peers) do
     receive do
       {:oneConnection} ->
-        IO.puts "New connection, now the number of connecitons: " <> inspect(count + 1)
+        #IO.puts "New connection, now the number of connecitons: " <> inspect(count + 1)
         countConnections(count + 1, num_finish, num_peers)
       {:finish, id, pid} ->
         new_num_finish = num_finish + 1
         if new_num_finish < num_peers do
-          IO.puts "Peer (id: " <> inspect(id) <> " PID: " <> inspect(pid) <> ") finish"
+          #IO.puts "Peer (id: " <> inspect(id) <> " PID: " <> inspect(pid) <> ") finish"
           countConnections(count, new_num_finish, num_peers)
         else
-          IO.puts "END, final connection number: " <> inspect(count)
+          #IO.puts "END, final connection number: " <> inspect(count)
+          #IO.puts inspect(count / (num_peers * num))
+          count
         end
     end
   end

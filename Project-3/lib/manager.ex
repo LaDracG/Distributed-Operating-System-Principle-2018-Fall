@@ -5,9 +5,9 @@ defmodule Manager do
     #IO.puts "total: " <> inspect(num_total) <> " peers: " <> inspect(num_peers)
     types = Enum.shuffle(List.duplicate(1, num_peers) ++ List.duplicate(0, num_total - num_peers))
     pids = startAllPeers(counter_pid, 0, types, [])
-    IO.puts "Start all nodes"
-    IO.puts inspect(pids)
-    IO.puts "Assign attributes"
+    #IO.puts "Start all nodes"
+    #IO.puts inspect(pids)
+    #IO.puts "Assign attributes"
     assignAttrs(0, pids, len_tb)
     #IO.puts inspect(pids)
     #for i <- Enum.to_list(1..num_total) do
@@ -15,7 +15,7 @@ defmodule Manager do
     #  pid = Enum.at(Enum.at(pids, i-1), 1)
     #  IO.puts "id: " <> inspect(id) <> " type: " <> inspect(getType(id, pids)) <> " Pred: " <> inspect(closestPred(id, pids)) <> " Succ: " <> inspect(findSucc(id, pids)) <> " FinTB: " <> inspect(getFintb(id, pids))
     #end
-    IO.puts "Start requesting"
+    #IO.puts "Start requesting"
     startAllRequests(pids, num_reqs)
   end
 
