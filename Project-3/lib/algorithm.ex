@@ -33,12 +33,16 @@ defmodule Algorithm do
 			else
 				if logicLarger(tmp_id, id, cid, num_nodes) do
 					{:not_found, Enum.at(finger_table, i - 1)}
+				else
+					if i == length(finger_table) - 1 do
+						{:not_found, Enum.at(finger_table, i)}
+					end
 				end
 			end
 		end
 	end
-	
-	def join(ids, node_table) do
+
+	def join(ids) do
 		pid = Enum.at(ids, 1)
 		pred = GenServer.call(pid, :getPred)
 		pred_pid = Enum.at(pred, 1)
