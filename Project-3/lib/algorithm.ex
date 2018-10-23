@@ -1,3 +1,0 @@
-defmodule Algorithm do
-
-end
