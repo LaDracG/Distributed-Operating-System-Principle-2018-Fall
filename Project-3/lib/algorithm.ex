@@ -23,7 +23,8 @@ defmodule Algorithm do
 	end
 
 	#id: target id; cid: current node's id
-	def routingRequests(ids, cids, num_nodes, finger_table) do
+	def routingRequests(ids, cids, finger_table) do
+		num_nodes = :math.pow(2, length(finger_table))
 		id = Enum.at(ids, 0)
 		cid = Enum.at(cids, 0)
 		for i <- 0..length(finger_table) - 1 do
