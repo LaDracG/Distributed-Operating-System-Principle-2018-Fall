@@ -29,7 +29,6 @@ defmodule Algorithm do
 		num_nodes = :math.pow(2, length(finger_table))
 		
 		"""
-		############
 		for i <- 0..length(finger_table) - 1 do
 			tmp_id = Enum.at(Enum.at(finger_table, i), 0)
 			if tmp_id == getSuccesor(ids) do
@@ -44,7 +43,6 @@ defmodule Algorithm do
 				end
 			end
 		end
-		############
 		"""
 
 		cid_succ = Enum.at(cid_succ_withPid, 0)
