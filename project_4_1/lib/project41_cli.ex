@@ -1,4 +1,4 @@
-defmodule Project3.CLI do
+defmodule Project41.CLI do
   def main(args \\ []) do
     {opts, words, _} =
       OptionParser.parse(args, switches: [])
@@ -11,6 +11,10 @@ defmodule Project3.CLI do
       IO.puts "The number of peers cannot be less than 3!"
     else
       #Manager.start(num_nodes)
+      t = %Transaction{}
+      IO.puts inspect t.num_inputs
+      t = %{t | num_inputs: 1}
+      IO.puts inspect t.num_inputs
       loop()
     end
   end
