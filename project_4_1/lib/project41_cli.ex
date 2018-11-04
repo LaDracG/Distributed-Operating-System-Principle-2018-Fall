@@ -25,6 +25,11 @@ defmodule Project41.CLI do
       sig = Alg.signTransaction(private_key1, hash, public_key2)
       IO.puts sig
       IO.puts Alg.verifyTransaction(sig, public_key1, hash, public_key2)
+      {:ok, _} = Registry.start_link(keys: :duplicate, name: Registry.PubSubTest, partitions: System.schedulers_online)
+      {:ok, pid1} = BitNode.start(1000)
+      :timer.sleep(3000)
+      {:ok, pid2} = BitNode.start(1000)
+      GenServer.cast(pid1, {:ask_transaction, pid2})
       #sig = Alg.generateSignature(private_key, "1")
       #IO.puts inspect Alg.verifySignature(public_key, sig, "2")
       #IO.puts inspect Alg.hashTransaction(t)
