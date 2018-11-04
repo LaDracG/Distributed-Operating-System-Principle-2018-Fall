@@ -27,7 +27,7 @@ defmodule BitNode do
 							:public_key => nil, #hex string
 							:private_key => nil, #hex string
 							:nodes => %{}, #pid => public key
-							:prev_transaction => nil, #Transaction struct
+							:prev_transaction => %Transaction{}, #Transaction struct
 							:initialized => false
 						})
 	end
@@ -72,24 +72,33 @@ defmodule BitNode do
 		{:noreply, state}
 	end
 
-	def handle_call({:receive_transaction, sender, new_tx}, state) do
+	def handle_call({:receive_transaction, sender, new_tx}, from, state) do
 		sign = new_tx.signature
 		sender_public_key = Map.get(Map.get(state, :nodes), sender)
-		private_key = Map.get(state, :private_key)
+		public_key = Map.get(state, :public_key)
 		prev_hash = Alg.hashTransaction(Map.get(state, :prev_transaction))
-		if Alg.verifyTransaction(sign, sender_public_key, prev_hash, private_key) do
+		if Alg.verifyTransaction(sign, sender_public_key, prev_hash, public_key) do
 			GenServer.cast(self(), {:new_tx, new_tx})
 			broadcast({:new_tx, new_tx})
-			{:reply, true}
+			IO.puts 'transaction succeeded'
+			{:reply, True, state}
 		else
-			{:reply, false}
+			IO.puts 'transaction failed'
+			{:reply, False, state}
 		end
 	end
 
+	#create new block, empty txs
 	def handle_info(:time_up, state) do
 		interval = Map.get(state, :flush_interval)
 		state = Map.replace!(state, :timer, Process.send_after(self(), :time_up, interval))
-		GenServer.cast(self(), :new_block)
+		txs = Map.get(state, :txs)
+		#root = Alg.generateMerkelTree(txs)
+		current_tail = Map.get(state, :current_tail)
+		new_block = nil#%Block{} to be filled
+		state = Map.replace!(state, :current_tail, new_block)
+		IO.puts 'new block created'
+		IO.inspect(Map.get(state, :txs))
 		state = Map.replace!(state, :txs, [])
 		{:noreply, state}
 	end
@@ -112,18 +121,6 @@ defmodule BitNode do
 		new_txs = Map.get(state, :txs) ++ [new_tx]
 		state = Map.replace!(state, :txs, new_txs)
 		state = Map.replace!(state, :prev_transaction, new_tx)
-		{:noreply, state}
-	end
-
-	# flush interval time up, create and broadcast
-	def handle_cast(:new_block, state) do
-		txs = Map.get(state, :txs)
-		#root = Alg.generateMerkelTree(txs)
-		current_tail = Map.get(state, :current_tail)
-		new_block = nil#%Block{} to be filled
-		state = Map.replace!(state, :current_tail, new_block)
-		IO.puts 'new block created'
-		#IO.inspect(Map.get(state, :nodes))
 		{:noreply, state}
 	end
 end

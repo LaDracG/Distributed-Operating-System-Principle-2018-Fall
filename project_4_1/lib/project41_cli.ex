@@ -29,6 +29,7 @@ defmodule Project41.CLI do
       {:ok, pid1} = BitNode.start(1000)
       :timer.sleep(3000)
       {:ok, pid2} = BitNode.start(1000)
+      :timer.sleep(100)
       GenServer.cast(pid1, {:ask_transaction, pid2})
       #sig = Alg.generateSignature(private_key, "1")
       #IO.puts inspect Alg.verifySignature(public_key, sig, "2")
