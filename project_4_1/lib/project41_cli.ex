@@ -12,9 +12,22 @@ defmodule Project41.CLI do
     else
       #Manager.start(num_nodes)
       t = %Transaction{}
-      IO.puts inspect t.num_inputs
+      #IO.puts inspect t.num_inputs
       t = %{t | num_inputs: 1}
-      IO.puts inspect t.num_inputs
+      #IO.puts inspect t.num_inputs
+      #tlist = Map.values(Map.from_struct(t))
+      #IO.puts inspect(tlist)
+      #IO.puts inspect :crypto.hash(:sha256, tlist) #|> Base.encode16
+      #IO.puts Alg.bin2hex(:crypto.hash(:sha256, tlist))
+      {public_key1, private_key1} = Alg.generateKeyPair()
+      {public_key2, private_key2} = Alg.generateKeyPair()
+      hash = Alg.hashString(:sha256, "1", 2)
+      sig = Alg.signTransaction(private_key1, hash, public_key2)
+      IO.puts sig
+      IO.puts Alg.verifyTransaction(sig, public_key1, hash, public_key2)
+      #sig = Alg.generateSignature(private_key, "1")
+      #IO.puts inspect Alg.verifySignature(public_key, sig, "2")
+      #IO.puts inspect Alg.hashTransaction(t)
       loop()
     end
   end
