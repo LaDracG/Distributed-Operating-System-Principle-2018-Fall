@@ -61,4 +61,59 @@ defmodule Alg do
     verifySignature(signature, sender_public_key, hash)
   end
 
+  def generateTransaction(sender_hash, receiver_hash, trans_amount, trans_fee, tail_block, blockchain_pid) do
+    # blockchain_pid is the PID of blockchain GenServer of current node
+    # Each node uses a GenServer to manage its local blockchain copy
+    {final_inputs_amount, final_inputs} = generateTransInputs(sender_hash, 0, [], trans_amount, trans_fee, tail_block, blockchain_pid)
+    if final_inputs_amount < trans_amount + trans_fee do
+      IO.puts "You have no enough balance for this transaction!"
+      nil
+    else
+      actual_output = %Transaction.Output{receiver: receiver_hash, value: trans_amount, is_spent: false}
+      change_output = %Transaction.Output{receiver: sender_hash, value: final_inputs_amount - trans_amount - trans_fee, is_spent: false}
+      trans_fee_output = %Transaction.Output{receiver: "", value: trans_fee, is_spent: false}
+      %Transaction{sender: sender_hash, receiver: receiver_hash, num_inputs: length(final_inputs), inputs: final_inputs, num_outputs: 3, outputs: [actual_output, change_output, trans_fee_output], trans_fee: trans_fee, signature: ""}
+    end
+  end
+
+  def generateTransInputs(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, tail_block, blockchain_pid) do
+    if tail_block != nil and cur_inputs_amount < trans_amount + trans_fee do # no enough inputs, then continue
+      {cur_inputs_amount, cur_inputs} = generateTransInputsInOneBlock(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, tail_block, 0)
+      prev_block = getPrevBlock(tail_block, blockchain_pid)
+      generateTransInputs(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, prev_block, blockchain_pid)
+    else
+      {cur_inputs_amount, cur_inputs}
+    end
+  end
+
+  def generateTransInputsInOneBlock(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, block, trans_index) do
+    if trans_index < block.num_trans and cur_inputs_amount < trans_amount + trans_fee do # no enough inputs and not yet arrived end of current block, then continue
+      cur_trans = Enum.at(block.trans, trans_index)
+      {cur_inputs_amount, cur_inputs} = generateTransInputsInOneTransaction(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, cur_trans, 0)
+      generateTransInputsInOneBlock(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, block, trans_index + 1)
+    else
+      {cur_inputs_amount, cur_inputs}
+    end
+  end
+
+  def generateTransInputsInOneTransaction(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, transaction, output_index) do
+    if output_index < transaction.num_outputs and cur_inputs_amount < trans_amount + trans_fee do # no enough inputs and not yet arrived end of current transaction, then continue
+      cur_output = Enum.at(transaction.outputs, output_index)
+      if cur_output.receiver == sender_hash do # if this output belongs to sender, sender can use it.
+        new_input = %Transaction.Input{prev_trans_hash: hashTransaction(transaction), prev_output_index: output_index}
+        cur_inputs = cur_inputs ++ [new_input]
+        cur_inputs_amount = cur_inputs_amount + cur_output.value
+        generateTransInputsInOneTransaction(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, transaction, output_index + 1)
+      else # sender cannot use it. we just skip it.
+        generateTransInputsInOneTransaction(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, transaction, output_index + 1)
+      end
+    else
+      {cur_inputs_amount, cur_inputs}
+    end
+  end
+
+  def getPrevBlock(cur_block, blockchain_pid) do
+    prev_block = GenServer.call(blockchain_pid, {:getBlock, cur_block.prev_hash})
+    prev_block
+  end
 end
