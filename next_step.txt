@@ -2,3 +2,7 @@
 2. Generate blocks -- Done
 3. Test generateTransaction()
 4. Test GenServer to getBlock()
+ 
+BUG: 
+1. balance only count received outputs, forget sent inputs.
+2. initial mode of transaction, change need to be zero.
