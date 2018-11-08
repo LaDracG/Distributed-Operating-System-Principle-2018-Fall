@@ -65,9 +65,10 @@ defmodule Alg do
     verifySignature(signature, sender_public_key, hash)
   end
 
-  def generateTransaction(sender_hash, receiver_hash, trans_amount, trans_fee, tail_block, blockchain_pid) do
+  def generateTransaction(sender_hash, receiver_hash, trans_amount, trans_fee, blockchain_pid) do
     # blockchain_pid is the PID of blockchain GenServer of current node
     # Each node uses a GenServer to manage its local blockchain copy
+    tail_block = getTailBlock(blockchain_pid)
     {final_inputs_amount, final_inputs} = generateTransInputs(sender_hash, 0, [], trans_amount, trans_fee, tail_block, blockchain_pid)
     if final_inputs_amount < trans_amount + trans_fee do
       IO.puts "You have no enough balance for this transaction!"
