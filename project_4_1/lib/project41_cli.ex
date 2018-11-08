@@ -42,6 +42,12 @@ defmodule Project41.CLI do
     loop()
   end
 
+  def testChain() do
+    chain = BlockChain.start()
+    block = Alg.generateBlock(chain, [], 100, 10)
+    Alg.appendBlock(chain, block)
+    # TODO
+  end
   """
   def waitNetworkFinish(net_pid) do
     if Process.alive?(net_pid) do

@@ -2,9 +2,9 @@
              [{applications,[kernel,stdlib,elixir,logger]},
               {description,"project_4_1"},
               {modules,['Elixir.Alg','Elixir.BitNode','Elixir.Block',
-                        'Elixir.Block.Header','Elixir.Project3.CLI',
-                        'Elixir.Project41.CLI','Elixir.Transaction',
-                        'Elixir.Transaction.Input',
+                        'Elixir.Block.Header','Elixir.BlockChain',
+                        'Elixir.Project3.CLI','Elixir.Project41.CLI',
+                        'Elixir.Transaction','Elixir.Transaction.Input',
                         'Elixir.Transaction.Output']},
               {registered,[]},
               {vsn,"0.1.0"}]}.

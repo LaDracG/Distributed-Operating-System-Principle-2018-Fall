@@ -31,8 +31,12 @@ defmodule Alg do
     hashStruct(:sha256, transaction, 2)
   end
 
-  def generateMerkleTree(transactions) do
+  def hashBlock(block) do # block hash is created by hashing block header twice.
+    hashStruct(:sha256, block.header, 2)
+  end
 
+  def generateMerkleRoot(transactions) do
+    nil
   end
 
   def generateKeyPair() do
@@ -112,8 +116,41 @@ defmodule Alg do
     end
   end
 
-  def getPrevBlock(cur_block, blockchain_pid) do
-    prev_block = GenServer.call(blockchain_pid, {:getBlock, cur_block.prev_hash})
+  def getPrevBlock(blockchain_pid, cur_block) do
+    #prev_block = GenServer.call(blockchain_pid, {:getBlock, cur_block.prev_hash})
+    prev_block = getBlock(blockchain_pid, cur_block.prev_hash)
     prev_block
   end
+
+  def getTailBlock(blockchain_pid) do
+    GenServer.call(blockchain_pid, :getTailBlock)
+  end
+
+  def getBlock(blockchain_pid, block_hash) do
+    GenServer.call(blockchain_pid, {:getBlock, block_hash})
+  end
+
+  def generateBlock(blockchain_pid, transactions, diff_target, nonce) do
+    tail_block = getTailBlock(blockchain_pid)
+    prev_hash = hashBlock(tail_block)
+    merkle_root = generateMerkleRoot(transactions)
+    timestamp = nil # TODO: get current timestamp here
+    block_header = %Block.Header{prev_hash: prev_hash, merkle_root: merkle_root, timestamp: timestamp, diff_target: diff_target, nonce: nonce}
+    block = %Block{header: block_header, num_trans: length(transactions), trans: transactions}
+    block
+  end
+
+  def appendBlock(blockchain_pid, block) do
+    GenServer.call(blockchain_pid, {:appendBlock, block})
+  end
+
+  def printObject(object) do
+    IO.puts inspect Map.from_struct(object)
+  end
+
+  def printBlockChain(blockchain_pid) do
+    # TODO
+  end
 end
+
+
