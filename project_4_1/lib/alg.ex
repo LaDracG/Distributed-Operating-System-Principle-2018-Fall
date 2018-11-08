@@ -149,7 +149,15 @@ defmodule Alg do
   end
 
   def printBlockChain(blockchain_pid) do
-    # TODO
+    tail_block = getTailBlock(blockchain_pid)
+    printBlockChainHelper(blockchain_pid, tail_block)
+  end
+
+  def printBlockChainHelper(blockchain_pid, cur_block) do
+    if cur_block != nil do
+      printObject(cur_block)
+      printBlockChainHelper(blockchain_pid, getPrevBlock(blockchain_pid, cur_block))
+    end
   end
 end
 
