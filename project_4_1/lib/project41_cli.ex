@@ -10,9 +10,9 @@ defmodule Project41.CLI do
     if num_nodes < 3 do
       IO.puts "The number of peers cannot be less than 3!"
     else
-      nodes_list = []
-      nodes_list = add_nodes(num_nodes, nodes_list)
-      testChain(nodes_list)
+      #nodes_list = []
+      #nodes_list = add_nodes(num_nodes, nodes_list)
+      testChain()
       '''
       #Manager.start(num_nodes)
       t = %Transaction{}
@@ -59,20 +59,21 @@ defmodule Project41.CLI do
     loop()
   end
 
-  def testChain(nodes_list) do
-    pid1 = nodes_list[0]
-    pid2 = nodes_list[1]
-    pid3 = nodes_list[2]
-    public_key = GenServer.call(pid1, :public_key)
-    #t = %Transaction{public_key, public_key}
-    chain = BlockChain.start()
-    block1 = Alg.generateBlock(chain, [], 100, 10)
-    #Alg.printObject(block)
-    Alg.appendBlock(chain, block1)
-    block2 = Alg.generateBlock(chain, [], 200, 5)
-    Alg.appendBlock(chain, block2)
-    Alg.printBlockChain(chain)
-    #Alg.printObject(Alg.getTailBlock(chain))
+  def testChain() do
+    {:ok, _} = Registry.start_link(keys: :duplicate, name: Registry.PubSubTest, partitions: System.schedulers_online) # essential
+    {:ok, pid1} = BitNode.start(1000, true)
+    public_key_1 = GenServer.call(pid1, :public_key)
+    blockchain_pid_1 = GenServer.call(pid1, :blockchain_pid)
+    t = Alg.generateTransaction(public_key_1, public_key_1, 10000, 0, blockchain_pid_1, 0)
+    Alg.printObject(t)
+    b = Alg.generateBlock(blockchain_pid_1, [t], 0, 0)
+    Alg.appendBlock(blockchain_pid_1, b)
+    IO.puts Alg.getBalance(blockchain_pid_1, public_key_1)
+    {:ok, pid2} = BitNode.start(1000)
+    :timer.sleep(100)
+    Alg.printBlockChain(blockchain_pid_1)
+    IO.puts Alg.getBalance(blockchain_pid_1, public_key_1)
+    loop()
   end
   """
   def waitNetworkFinish(net_pid) do

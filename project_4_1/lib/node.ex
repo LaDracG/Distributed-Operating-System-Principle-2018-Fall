@@ -16,7 +16,7 @@ defmodule BitNode do
 		{:ok, state}
 	end
 
-	def start(flush_interval) do
+	def start(flush_interval, first? \\ false) do
 		{:ok, pid} = GenServer.start_link(
 						__MODULE__,
 						%{
@@ -29,10 +29,14 @@ defmodule BitNode do
 							:private_key => nil, #hex string
 							:nodes => %{}, #pid => public key
 							:r_nodes => %{}, #public key => pid
-							:block_server => Block.start(),
+							:block_server => BlockChain.start(),
 										#:block_map => %{}, #map of block chain, hash_value => block
 							:prev_transaction => %Transaction{}, #Transaction struct
-							:initialized => false
+							:initialized => if first? do
+												true
+											else
+												false
+											end
 						})
 	end
 
@@ -41,7 +45,7 @@ defmodule BitNode do
 	end
 
 	def broadcast(msg) do
-		Registry.dispatch(Registry.PubSubTest, 'bitcoin',
+		Registry.dispatch(Registry.PubSubTest, 'bitcoin', 
 						fn entries -> for {pid, _} <- entries, do: if pid != self(), do: GenServer.cast(pid, msg)
 					end)
 	end
@@ -57,6 +61,11 @@ defmodule BitNode do
 	def handle_cast({:broadcast, msg}, state) do
 		broadcast(msg)
 		{:noreply, state}
+	end
+
+	#for test
+	def handle_call(:blockchain_pid, from, state) do
+		{:reply, Map.get(state, :block_server), state}
 	end
 
 	def handle_cast({:rookie, nodes, r_nodes, block_table, tail, prev_transaction}, state) do
@@ -93,7 +102,9 @@ defmodule BitNode do
 			nodes = Map.get(state, :nodes)
 			new_tx = Alg.generateTransaction(public_key, target_public_key, amount, fee, Map.get(state, :block_server))
 						#new_tx = %Transaction{sender: Map.get(:nodes, self()), receiver: Map.get(:nodes, target), signature: sign} # TODO?
-			broadcast({:new_tx, new_tx})
+			if new_tx != nil do
+				broadcast({:new_tx, new_tx})
+			end
 						#result = GenServer.call(target, {:receive_transaction, self(), new_tx})
 		end
 		{:noreply, state}
@@ -108,12 +119,14 @@ defmodule BitNode do
 		if Map.get(state, :initialized) do
 			interval = Map.get(state, :flush_interval)
 			state = Map.replace!(state, :timer, Process.send_after(self(), :time_up, interval))
-
+		
 			txs = Map.get(state, :txs)
 			diff_target = 0
 			nonce = 0
 			new_block = Alg.generateBlock(Map.get(state, :block_server), txs, diff_target, nonce)
 			state = Map.replace!(state, :txs, [])
+
+			IO.puts('time up')
 			#TODO mining functions
 			#miner = BitNode.Miner.start()
 			#GenServer.cast(miner, {:mine, block, self()})
