@@ -64,7 +64,7 @@ defmodule Project41.CLI do
     pid2 = nodes_list[1]
     pid3 = nodes_list[2]
     public_key = GenServer.call(pid1, :public_key)
-    t = %Transaction{public_key, public_key}
+    #t = %Transaction{public_key, public_key}
     chain = BlockChain.start()
     block1 = Alg.generateBlock(chain, [], 100, 10)
     #Alg.printObject(block)
