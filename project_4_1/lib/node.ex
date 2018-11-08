@@ -47,7 +47,11 @@ defmodule BitNode do
 	end
 
 	def getBalance(owner) do
-		Alg.getBalance(Map.get(state, :block_server), Map.get(Map.get(state, :nodes), owner))
+		GenServer.call(self(), {:getBalance, owner})
+	end
+
+	def handle_call({:getBalance, owner}, from, state) do
+		{:reply, Alg.getBalance(Map.get(state, :block_server), Map.get(Map.get(state, :nodes), owner)), state}
 	end
 
 	def handle_cast({:broadcast, msg}, state) do
@@ -97,6 +101,7 @@ defmodule BitNode do
 
 	def handle_call(:public_key, from, state) do
 		{:reply, Map.get(state, :public_key), state}
+	end
 
 	#create new block, empty txs
 	def handle_info(:time_up, state) do
