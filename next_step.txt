@@ -1,4 +1,4 @@
-1. Scan all blocks to compute balance
-2. Generate blocks
+1. Scan all blocks to compute balance -- Done
+2. Generate blocks -- Done
 3. Test generateTransaction()
 4. Test GenServer to getBlock()

@@ -23,6 +23,7 @@ defmodule Project41.CLI do
       #IO.puts inspect(tlist)
       #IO.puts inspect :crypto.hash(:sha256, tlist) #|> Base.encode16
       #IO.puts Alg.bin2hex(:crypto.hash(:sha256, tlist))
+      """
       {public_key1, private_key1} = Alg.generateKeyPair()
       {public_key2, private_key2} = Alg.generateKeyPair()
       hash = Alg.hashString(:sha256, "1", 2)
@@ -38,6 +39,8 @@ defmodule Project41.CLI do
       #sig = Alg.generateSignature(private_key, "1")
       #IO.puts inspect Alg.verifySignature(public_key, sig, "2")
       #IO.puts inspect Alg.hashTransaction(t)
+      """
+      testChain()
       loop()
       '''
     end
@@ -63,9 +66,12 @@ defmodule Project41.CLI do
     public_key = GenServer.call(pid1, :public_key)
     t = %Transaction{public_key, public_key}
     chain = BlockChain.start()
-    block = Alg.generateBlock(chain, [], 100, 10)
-    Alg.appendBlock(chain, block)
-    # TODO
+    block1 = Alg.generateBlock(chain, [], 100, 10)
+    block2 = Alg.generateBlock(chain, [], 200, 5)
+    #Alg.printObject(block)
+    IO.puts inspect Alg.appendBlock(chain, block1)
+    IO.puts inspect Alg.appendBlock(chain, block2)
+    Alg.printBlockChain(chain)
   end
   """
   def waitNetworkFinish(net_pid) do

@@ -7,9 +7,24 @@ defmodule Alg do
     Base.decode16!(hex)
   end
 
+  def nil2str(list, out_list) do
+    if list != [] do
+      out_list =
+        if hd(list) == nil do
+          out_list ++ ["nil"]
+        else
+          out_list ++ [hd(list)]
+        end
+      nil2str(tl(list), out_list)
+    else
+      out_list
+    end
+  end
+
   def hashStruct(alg, object, num_rounds) do
     if num_rounds > 0 do
       vlist = Map.values(Map.from_struct(object))
+      vlist = nil2str(vlist, []) # :crypto.hash cannot hash nil, so we have to convert all nil to "nil".
       res = :crypto.hash(alg, vlist) |> Base.encode16
       hashString(alg, res, num_rounds-1)
     else
@@ -65,12 +80,12 @@ defmodule Alg do
     verifySignature(signature, sender_public_key, hash)
   end
 
-  def generateTransaction(sender_hash, receiver_hash, trans_amount, trans_fee, blockchain_pid) do
+  def generateTransaction(sender_hash, receiver_hash, trans_amount, trans_fee, blockchain_pid, mode \\ 1) do
     # blockchain_pid is the PID of blockchain GenServer of current node
     # Each node uses a GenServer to manage its local blockchain copy
     tail_block = getTailBlock(blockchain_pid)
     {final_inputs_amount, final_inputs} = generateTransInputs(sender_hash, 0, [], trans_amount, trans_fee, tail_block, blockchain_pid)
-    if final_inputs_amount < trans_amount + trans_fee do
+    if mode == 1 and final_inputs_amount < trans_amount + trans_fee do
       IO.puts "You have no enough balance for this transaction!"
       nil
     else
@@ -119,7 +134,7 @@ defmodule Alg do
 
   def getPrevBlock(blockchain_pid, cur_block) do
     #prev_block = GenServer.call(blockchain_pid, {:getBlock, cur_block.prev_hash})
-    prev_block = getBlock(blockchain_pid, cur_block.prev_hash)
+    prev_block = getBlock(blockchain_pid, cur_block.header.prev_hash)
     prev_block
   end
 
@@ -133,7 +148,12 @@ defmodule Alg do
 
   def generateBlock(blockchain_pid, transactions, diff_target, nonce) do
     tail_block = getTailBlock(blockchain_pid)
-    prev_hash = hashBlock(tail_block)
+    prev_hash =
+      if tail_block == nil do
+        ""
+      else
+        hashBlock(tail_block)
+      end
     merkle_root = generateMerkleRoot(transactions)
     timestamp = nil # TODO: get current timestamp here
     block_header = %Block.Header{prev_hash: prev_hash, merkle_root: merkle_root, timestamp: timestamp, diff_target: diff_target, nonce: nonce}
