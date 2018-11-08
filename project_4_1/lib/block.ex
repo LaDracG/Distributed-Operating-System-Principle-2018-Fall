@@ -29,13 +29,7 @@ defmodule BlockChain do
   end
 
   def handle_call({:getBlock, block_hash}, from, state) do
-    block = 
-      if block_hash != nil do
-        Map.get(Map.get(state, :block_table), block_hash)
-      else
-        nil
-      end
-    {:reply, block, state}
+    {:reply, Map.get(Map.get(state, :block_table), block_hash), state}
   end
 
   def handle_call({:appendBlock, block}, from, state) do
@@ -44,17 +38,5 @@ defmodule BlockChain do
     block_table = Map.put(block_table, Alg.hashBlock(block), block)
     state = Map.replace!(state, :block_table, block_table)
     {:reply, :ok, state}
-  end
-
-  def handle_call(:getBlockTable, from, state) do
-    block_table = Map.get(state, :block_table)
-    tail = Map.get(state, :tail)
-    {:reply, {block_table, tail}, state}
-  end
-
-  def handle_cast({:initialize, block_table, tail}, state) do
-    state = Map.replace!(state, :block_table, block_table)
-    state = Map.replace!(state, :tail, tail)
-    {:noreply, state}
   end
 end
