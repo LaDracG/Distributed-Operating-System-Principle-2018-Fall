@@ -41,7 +41,7 @@ defmodule BitNode do
 	end
 
 	def broadcast(msg) do
-		Registry.dispatch(Registry.PubSubTest, 'bitcoin', 
+		Registry.dispatch(Registry.PubSubTest, 'bitcoin',
 						fn entries -> for {pid, _} <- entries, do: if pid != self(), do: GenServer.cast(pid, msg)
 					end)
 	end
@@ -108,7 +108,7 @@ defmodule BitNode do
 		if Map.get(state, :initialized) do
 			interval = Map.get(state, :flush_interval)
 			state = Map.replace!(state, :timer, Process.send_after(self(), :time_up, interval))
-		
+
 			txs = Map.get(state, :txs)
 			diff_target = 0
 			nonce = 0
