@@ -48,11 +48,12 @@ defmodule Project41.CLI do
   def testChain() do
     chain = BlockChain.start()
     block1 = Alg.generateBlock(chain, [], 100, 10)
-    block2 = Alg.generateBlock(chain, [], 200, 5)
     #Alg.printObject(block)
-    IO.puts inspect Alg.appendBlock(chain, block1)
-    IO.puts inspect Alg.appendBlock(chain, block2)
+    Alg.appendBlock(chain, block1)
+    block2 = Alg.generateBlock(chain, [], 200, 5)
+    Alg.appendBlock(chain, block2)
     Alg.printBlockChain(chain)
+    #Alg.printObject(Alg.getTailBlock(chain))
   end
   """
   def waitNetworkFinish(net_pid) do

@@ -37,6 +37,8 @@ defmodule BlockChain do
     block_table = Map.get(state, :block_table)
     block_table = Map.put(block_table, Alg.hashBlock(block), block)
     state = Map.replace!(state, :block_table, block_table)
+    state = Map.replace!(state, :tail, block)
+    #IO.puts inspect state
     {:reply, :ok, state}
   end
 end

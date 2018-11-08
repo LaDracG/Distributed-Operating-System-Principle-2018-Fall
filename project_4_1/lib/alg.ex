@@ -147,6 +147,8 @@ defmodule Alg do
 
   def generateBlock(blockchain_pid, transactions, diff_target, nonce) do
     tail_block = getTailBlock(blockchain_pid)
+    #printObject(tail_block)
+    #IO.puts "A"
     prev_hash =
       if tail_block == nil do
         ""
@@ -176,6 +178,7 @@ defmodule Alg do
   def printBlockChainHelper(blockchain_pid, cur_block) do
     if cur_block != nil do
       printObject(cur_block)
+      #IO.puts "Here"
       printBlockChainHelper(blockchain_pid, getPrevBlock(blockchain_pid, cur_block))
     end
   end
