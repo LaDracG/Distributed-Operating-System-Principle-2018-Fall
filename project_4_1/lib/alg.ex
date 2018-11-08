@@ -159,6 +159,51 @@ defmodule Alg do
       printBlockChainHelper(blockchain_pid, getPrevBlock(blockchain_pid, cur_block))
     end
   end
+
+  def getBalance(blockchain_pid, owner) do
+    tail_block = getTailBlock(blockchain_pid)
+    getBalanceHelper(blockchain_pid, owner, tail_block, 0)
+  end
+
+  def getBalanceHelper(blockchain_pid, owner, cur_block, balance) do
+    if cur_block != nil do
+      balance = balance + getBalanceInOneBlock(owner, cur_block)
+      getBalanceHelper(blockchain_pid, owner, getPrevBlock(blockchain_pid, cur_block), balance)
+    else
+      balance
+    end
+  end
+
+  def getBalanceInOneBlock(owner, block) do
+    getBalanceInTransList(owner, block.trans, 0)
+  end
+
+  def getBalanceInTransList(owner, trans_list, balance) do
+    if trans_list != [] do
+      balance = balance + getBalanceInOneTrans(owner, hd(trans_list))
+      getBalanceInTransList(owner, tl(trans_list), balance)
+    else
+      balance
+    end
+  end
+
+  def getBalanceInOneTrans(owner, trans) do
+    getBalanceInOutputs(owner, trans.outputs, 0)
+  end
+
+  def getBalanceInOutputs(owner, outputs, balance) do
+    if outputs != [] do
+      balance =
+        if hd(outputs).receiver == owner do
+          balance + hd(outputs).value
+        else
+          balance
+        end
+      getBalanceInOutputs(owner, tl(outputs), balance)
+    else
+      balance
+    end
+  end
 end
 
 
