@@ -45,7 +45,7 @@ defmodule Project41.CLI do
       '''
     end
   end
-
+  '''
   def add_nodes(num_nodes, nodes_list) do
     if num_nodes == 0 do
       nodes_list
@@ -54,6 +54,7 @@ defmodule Project41.CLI do
       add_nodes(num_nodes - 1, nodes_list)
     end
   end
+  '''
 
   def loop() do
     loop()
@@ -65,14 +66,19 @@ defmodule Project41.CLI do
     public_key_1 = GenServer.call(pid1, :public_key)
     blockchain_pid_1 = GenServer.call(pid1, :blockchain_pid)
     t = Alg.generateTransaction(public_key_1, public_key_1, 10000, 0, blockchain_pid_1, 0)
-    Alg.printObject(t)
+    GenServer.cast(pid1, {:init_prev_tx, t})
+    #Alg.printObject(t)
     b = Alg.generateBlock(blockchain_pid_1, [t], 0, 0)
     Alg.appendBlock(blockchain_pid_1, b)
-    IO.puts Alg.getBalance(blockchain_pid_1, public_key_1)
+    #IO.puts Alg.getBalance(blockchain_pid_1, public_key_1)
+    :timer.sleep(2000)
     {:ok, pid2} = BitNode.start(1000)
-    :timer.sleep(100)
-    Alg.printBlockChain(blockchain_pid_1)
-    IO.puts Alg.getBalance(blockchain_pid_1, public_key_1)
+    #:timer.sleep(100)
+    #GenServer.cast(pid1, {:ask_transaction, pid2, 0, 0})
+    #Alg.printBlockChain(blockchain_pid_1)
+    :timer.sleep(2000)
+    GenServer.cast(pid1, {:ask_transaction, pid2, 0, 0})
+    #IO.puts Alg.getBalance(blockchain_pid_1, public_key_1)
     loop()
   end
   """

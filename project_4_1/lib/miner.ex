@@ -9,10 +9,12 @@ defmodule BitNode.Miner do
 		{:ok, pid} = GenServer.start_link(__MODULE__, %{})
 	end
 
-	def handle_cast({:mine, block, pid}, state) do
+	def handle_cast({:mine, block_server, txs, diff_target, pid}, state) do
+		nonce = :rand.uniform()
+		block = Alg.generateBlock(block_server, txs, diff_target, nonce)
 		block_hash = Alg.hashBlock(block)
-		if !Alg.validHash(block_hash) do
-			GenServer.cast(self(), {:mine, block, pid})
+		if !(block_hash < diff_target) do
+			GenServer.cast(self(), {:mine, block_server, txs, diff_target, pid})
 		else
 			GenServer.cast(pid, {:new_block, block})
 			GenServer.cast(pid, {:broadcast, {:new_block, block}})
