@@ -6,3 +6,4 @@
 BUG: 
 1. balance only count received outputs, forget sent inputs.
 2. initial mode of transaction, change need to be zero.
+3. verify transaction has a list of requirements.
