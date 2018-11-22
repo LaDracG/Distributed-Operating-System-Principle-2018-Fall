@@ -29,7 +29,7 @@ defmodule BlockChain do
   end
 
   def handle_call({:getBlock, block_hash}, from, state) do
-    block = 
+    block =
       if block_hash != nil do
         Map.get(Map.get(state, :block_table), block_hash)
       else

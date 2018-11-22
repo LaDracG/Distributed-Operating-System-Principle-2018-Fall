@@ -8,4 +8,5 @@ end
 
 defmodule Transaction.Output do
   defstruct receiver: "", value: 0, is_spent: false
+  # Note: is_spent is useless. We will not use it in the future. We leave it here because the code is hard to revise now.
 end

@@ -7,6 +7,7 @@ defmodule Alg do
     Base.decode16!(hex)
   end
 
+  """
   def nil2str(list, out_list) do
     if list != [] do
       out_list =
@@ -20,11 +21,26 @@ defmodule Alg do
       out_list
     end
   end
+  """
+
+  def all2str(list, out_list) do
+    if list != [] do
+      out_list =
+        if !String.valid?(hd(list)) do # if head of list is not a string
+          out_list ++ [inspect(hd(list))] # convert it to a string
+        else
+          out_list ++ [hd(list)]
+        end
+      all2str(tl(list), out_list)
+    else
+      out_list
+    end
+  end
 
   def hashStruct(alg, object, num_rounds) do
     if num_rounds > 0 do
       vlist = Map.values(Map.from_struct(object))
-      vlist = nil2str(vlist, []) # :crypto.hash cannot hash nil, so we have to convert all nil to "nil".
+      vlist = all2str(vlist, []) # :crypto.hash cannot hash non-string elements, so we have to convert all elements to strings.
       res = :crypto.hash(alg, vlist) |> Base.encode16
       hashString(alg, res, num_rounds-1)
     else
@@ -80,12 +96,27 @@ defmodule Alg do
     verifySignature(signature, sender_public_key, hash)
   end
 
-  def generateTransaction(sender_hash, receiver_hash, trans_amount, trans_fee, blockchain_pid, mode \\ 1) do
+  def getAllTransFee(transactions, res) do
+    if transactions != [] do
+      res = res + Enum.at(hd(transactions).outputs, 2) # outputs[2] is the transaction fee
+      getAllTransFee(tl(transactions), res)
+    else
+      res
+    end
+  end
+
+  def generateFirstTransaction(miner_hash, reward, normal_trans, blockchain_pid) do
+    all_trans_fee = getAllTransFee(normal_trans, 0)
+    actual_output = %Transaction.Output{receiver: miner_hash, value: reward + all_trans_fee, is_spent: false}
+    # TODO
+  end
+
+  def generateTransaction(sender_hash, receiver_hash, trans_amount, trans_fee, blockchain_pid) do
     # blockchain_pid is the PID of blockchain GenServer of current node
     # Each node uses a GenServer to manage its local blockchain copy
     tail_block = getTailBlock(blockchain_pid)
-    {final_inputs_amount, final_inputs} = generateTransInputs(sender_hash, 0, [], trans_amount, trans_fee, tail_block, blockchain_pid)
-    if mode == 1 and final_inputs_amount < trans_amount + trans_fee do
+    {final_inputs_amount, final_inputs} = generateTransInputs(sender_hash, 0, [], trans_amount, trans_fee, tail_block, blockchain_pid, MapSet.new())
+    if final_inputs_amount < trans_amount + trans_fee do
       IO.puts "You have no enough balance for this transaction!"
       nil
     else
@@ -96,40 +127,47 @@ defmodule Alg do
     end
   end
 
-  def generateTransInputs(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, tail_block, blockchain_pid) do
+  def generateTransInputs(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, tail_block, blockchain_pid, input_src) do
     if tail_block != nil and cur_inputs_amount < trans_amount + trans_fee do # no enough inputs, then continue
-      {cur_inputs_amount, cur_inputs} = generateTransInputsInOneBlock(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, tail_block, 0)
+      {cur_inputs_amount, cur_inputs, input_src} = generateTransInputsInOneBlock(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, tail_block, 0, input_src)
       prev_block = getPrevBlock(tail_block, blockchain_pid)
-      generateTransInputs(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, prev_block, blockchain_pid)
+      generateTransInputs(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, prev_block, blockchain_pid, input_src)
     else
       {cur_inputs_amount, cur_inputs}
     end
   end
 
-  def generateTransInputsInOneBlock(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, block, trans_index) do
+  def generateTransInputsInOneBlock(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, block, trans_index, input_src) do
     if trans_index < block.num_trans and cur_inputs_amount < trans_amount + trans_fee do # no enough inputs and not yet arrived end of current block, then continue
       cur_trans = Enum.at(block.trans, trans_index)
-      {cur_inputs_amount, cur_inputs} = generateTransInputsInOneTransaction(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, cur_trans, 0)
-      generateTransInputsInOneBlock(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, block, trans_index + 1)
+      {cur_inputs_amount, cur_inputs, input_src} = generateTransInputsInOneTransaction(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, cur_trans, 0, input_src)
+      generateTransInputsInOneBlock(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, block, trans_index + 1, input_src)
     else
-      {cur_inputs_amount, cur_inputs}
+      {cur_inputs_amount, cur_inputs, input_src}
     end
   end
 
-  def generateTransInputsInOneTransaction(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, transaction, output_index) do
+  def generateTransInputsInOneTransaction(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, transaction, output_index, input_src) do
+    # input_src is the sources of inputs, that is, the previous outputs. Here it is the same stuff with "inputs_after_it" in isSpentOutput().
     if output_index < transaction.num_outputs and cur_inputs_amount < trans_amount + trans_fee do # no enough inputs and not yet arrived end of current transaction, then continue
       cur_output = Enum.at(transaction.outputs, output_index)
-      if cur_output.receiver == sender_hash do # if this output belongs to sender, sender can use it.
+      if cur_output.receiver == sender_hash and !isSpentOutput(transaction, output_index, input_src) do # if this output belongs to sender and has NOT been spent, sender can use it.
+        input_src = MapSet.put(input_src, {hashTransaction(transaction), output_index})
         new_input = %Transaction.Input{prev_trans_hash: hashTransaction(transaction), prev_output_index: output_index}
         cur_inputs = cur_inputs ++ [new_input]
         cur_inputs_amount = cur_inputs_amount + cur_output.value
-        generateTransInputsInOneTransaction(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, transaction, output_index + 1)
+        generateTransInputsInOneTransaction(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, transaction, output_index + 1, input_src)
       else # sender cannot use it. we just skip it.
-        generateTransInputsInOneTransaction(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, transaction, output_index + 1)
+        generateTransInputsInOneTransaction(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, transaction, output_index + 1, input_src)
       end
     else
-      {cur_inputs_amount, cur_inputs}
+      {cur_inputs_amount, cur_inputs, input_src}
     end
+  end
+
+  def isSpentOutput(transaction, output_index, inputs_after_it) do # only need to check among the inputs after this output
+    # inputs_after_it is a MapSet. Each element is a tuple, {previous transaction hash, output index}.
+    MapSet.member?(inputs_after_it, {hashTransaction(transaction), output_index})
   end
 
   def getPrevBlock(blockchain_pid, cur_block) do
@@ -215,19 +253,37 @@ defmodule Alg do
     getBalanceInOutputs(owner, trans.outputs, 0)
   end
 
+  """
+    Getting balance need to be modified;
+    We need to scan both outputs and inputs in one transaction.
+  """
   def getBalanceInOutputs(owner, outputs, balance) do
-    if outputs != [] do
-      balance =
-        if hd(outputs).receiver == owner do
-          balance + hd(outputs).value
-        else
-          balance
-        end
-      getBalanceInOutputs(owner, tl(outputs), balance)
+    # This is just a placeholder.
+    balance
+  end
+  """
+  def getBalanceInOutputs(balance, owner, transaction, outputs, output_index, input_src) do
+    # balance: final result
+    # owner: owner of the balance
+    # transaction: the transaction to which the outputs belong
+    # outputs: list of outputs inside the transaction
+    # input_src: the source outputs of existed inputs
+    #if outputs != [] do
+    if output_index < length(outputs) do
+      #balance =
+        #if hd(outputs).receiver == owner and !isSpentOutput()do
+      if Enum.at(outputs, output_index).receiver == owner and !isSpentOutput(transaction, output_index, input_src) do
+        #input_src = MapSet.put(input_src, {hashTransaction(transaction), output_index})
+        balance = balance + Enum.at(outputs, output_index).value
+        getBalanceInOutputs(balance, owner, transaction, outputs, output_index + 1, input_src)
+      else
+        getBalanceInOutputs(balance, owner, transaction, outputs, output_index + 1, input_src)
+      end
     else
       balance
     end
   end
+  """
 end
 
 
