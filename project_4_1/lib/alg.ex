@@ -108,7 +108,7 @@ defmodule Alg do
   def generateFirstTransaction(miner_hash, reward, normal_trans, blockchain_pid) do
     all_trans_fee = getAllTransFee(normal_trans, 0)
     actual_output = %Transaction.Output{receiver: miner_hash, value: reward + all_trans_fee, is_spent: false}
-    # TODO
+    %Transaction{sender: "", receiver: miner_hash, num_inputs: 0, inputs: [], num_outputs: 1, outputs: [actual_output], trans_fee: 0, signature: ""}
   end
 
   def generateTransaction(sender_hash, receiver_hash, trans_amount, trans_fee, blockchain_pid) do
