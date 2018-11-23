@@ -184,7 +184,7 @@ defmodule Alg do
     GenServer.call(blockchain_pid, {:getBlock, block_hash})
   end
 
-  def generateBlock(blockchain_pid, transactions, diff_target, nonce) do
+  def generateBlock(blockchain_pid, transactions, diff_target, nonce, miner_hash, reward) do
     tail_block = getTailBlock(blockchain_pid)
     #printObject(tail_block)
     #IO.puts "A"
@@ -194,6 +194,8 @@ defmodule Alg do
       else
         hashBlock(tail_block)
       end
+    first_trans = generateFirstTransaction(miner_hash, reward, transactions, blockchain_pid)
+    transactions = [first_trans] ++ transactions
     merkle_root = generateMerkleRoot(transactions)
     timestamp = nil # TODO: get current timestamp here
     block_header = %Block.Header{prev_hash: prev_hash, merkle_root: merkle_root, timestamp: timestamp, diff_target: diff_target, nonce: nonce}
