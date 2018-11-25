@@ -224,6 +224,7 @@ defmodule Alg do
     end
   end
 
+  """
   def getBalance(blockchain_pid, owner) do
     tail_block = getTailBlock(blockchain_pid)
     getBalanceHelper(blockchain_pid, owner, tail_block, 0)
@@ -254,15 +255,44 @@ defmodule Alg do
   def getBalanceInOneTrans(owner, trans) do
     getBalanceInOutputs(owner, trans.outputs, 0)
   end
+  """
 
-  """
-    Getting balance need to be modified;
-    We need to scan both outputs and inputs in one transaction.
-  """
-  def getBalanceInOutputs(owner, outputs, balance) do
-    # This is just a placeholder.
-    balance
+  def getBalance(owner, tail_block, blockchain_pid, input_src, balance) do
+    if tail_block != nil do # not yet arrived at head of the blockchain, then continue
+      {balance, input_src} = getBalanceInOneBlock(owner, tail_block, 0, input_src, balance)
+      prev_block = getPrevBlock(tail_block, blockchain_pid)
+      getBalance(owner, prev_block, blockchain_pid, input_src, balance)
+    else
+      balance
+    end
   end
+
+  def getBalanceInOneBlock(owner, block, trans_index, input_src, balance) do
+    if trans_index < block.num_trans do # not yet arrived end of current block, then continue
+      cur_trans = Enum.at(block.trans, trans_index)
+      {balance, input_src} = getBalanceInOneTransaction(owner, cur_trans, 0, input_src, balance)
+      getBalanceInOneBlock(owner, block, trans_index + 1, input_src, balance)
+    else
+      {balance, input_src}
+    end
+  end
+
+  def getBalanceInOneTransaction(owner, transaction, output_index, input_src, balance) do
+    # input_src is the sources of inputs, that is, the previous outputs. Here it is the same stuff with "inputs_after_it" in isSpentOutput().
+    if output_index < transaction.num_outputs do # not yet arrived end of current transaction, then continue
+      cur_output = Enum.at(transaction.outputs, output_index)
+      if cur_output.receiver == owner and !isSpentOutput(transaction, output_index, input_src) do # if this output belongs to this account owner and has NOT been spent, it will be counted into balance.
+        input_src = MapSet.put(input_src, {hashTransaction(transaction), output_index})
+        balance = balance + cur_output.value
+        getBalanceInOneTransaction(owner, transaction, output_index + 1, input_src, balance)
+      else # This output cannot be counted into balance, so we just skip it.
+        getBalanceInOneTransaction(owner, transaction, output_index + 1, input_src, balance)
+      end
+    else
+      {balance, input_src}
+    end
+  end
+
   """
   def getBalanceInOutputs(balance, owner, transaction, outputs, output_index, input_src) do
     # balance: final result
