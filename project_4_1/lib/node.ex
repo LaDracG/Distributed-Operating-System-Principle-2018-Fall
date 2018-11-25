@@ -35,12 +35,13 @@ defmodule BitNode do
 							:r_nodes => %{}, #public key => pid
 							:block_server => BlockChain.start(),
 										#:block_map => %{}, #map of block chain, hash_value => block
-							:prev_transaction => nil, #Transaction struct
+							:prev_transaction => %Transaction{}, #nil, #Transaction struct
 							:initialized => if first? do
 												true
 											else
 												false
 											end,
+							:current_miner => BitNode.Miner.start(),
 							:first? => first?
 						})
 	end
@@ -141,11 +142,14 @@ defmodule BitNode do
 				txs = Map.get(state, :txs)
 				diff_target = @diff_target
 				block_server = Map.get(state, :block_server)
+				miner_hash = Map.get(state, :public_key)
+				prev_block_hash = Alg.hashBlock(GenServer.call(block_server, :getTailBlock))
 				state = Map.replace!(state, :txs, [])
 
 				IO.puts('time up')
-				{:ok, miner} = BitNode.Miner.start()
-				GenServer.cast(miner, {:mine, block_server, txs, diff_target, self()})
+				#{:ok, miner} = BitNode.Miner.start()
+				miner = Map.get(state, :current_miner)
+				GenServer.cast(miner, {:mine, block_server, txs, diff_target, miner_hash, prev_block_hash, self()})
 				state
 			else
 				state
@@ -164,9 +168,13 @@ defmodule BitNode do
 		{:noreply, state}
 	end
 	'''
-	def handle_cast({:new_block, block}, state) do
+	def handle_cast({:new_block, block, prev_block_hash}, state) do
 		if Map.get(state, :initialized) do
-			if Alg.hashBlock(block) < @diff_target do
+			prev_hash = Alg.hashBlock(GenServer.call(Map.get(state, :block_server), :getTailBlock))
+			if Alg.hashBlock(block) < @diff_target and prev_hash == prev_block_hash do
+				IO.inspect self()
+				IO.inspect prev_block_hash
+				GenServer.cast(Map.get(state, :current_miner), :stop)
 				res = Alg.appendBlock(Map.get(state, :block_server), block)
 			end
 		end
@@ -207,8 +215,16 @@ defmodule BitNode do
 
 	#TODO faster
 	def insert(queue, tx) do
-		queue = queue ++ [tx]
-		Enum.sort_by(queue, &(&1.trans_fee >= &2.trans_fee))
+		if Enum.empty?(queue) do
+			[tx]
+		else
+			[max | rest] = queue
+			if tx.trans_fee > max.trans_fee do
+				[tx | queue]
+			else
+				[max | insert(rest, tx)]
+			end
+		end
 	end
 
 	def handle_cast({:tx_failed, tx}, state) do
