@@ -56,8 +56,16 @@ defmodule Project41.CLI do
   end
   '''
 
-  def loop() do
-    loop()
+  def loop(blockchain_pid_1, blockchain_pid_2, public_key_1, public_key_2) do
+    :timer.sleep(1000)
+    #IO.puts "New block chain: \n"
+    #Alg.printBlockChain(blockchain_pid_1)
+    #Alg.printBlockChain(blockchain_pid_2)
+    IO.puts "node 1 balance: \n"
+    IO.puts Alg.getBalance2(public_key_1, blockchain_pid_1)
+    IO.puts "node 2 balance: \n"
+    IO.puts Alg.getBalance2(public_key_2, blockchain_pid_2)
+    loop(blockchain_pid_1, blockchain_pid_2, public_key_1, public_key_2)
   end
 
   def testChain() do
@@ -71,21 +79,36 @@ defmodule Project41.CLI do
     #Alg.printObject(t)
     b = Alg.generateBlock(blockchain_pid_1, [], 0, 0, public_key_1, 25, "")
     Alg.appendBlock(blockchain_pid_1, b)
-    IO.puts Alg.getBalance(public_key_1, blockchain_pid_1)
-    Alg.printBlockChain(blockchain_pid_1)
+    IO.puts "initial node 1 balance: \n"
+    IO.puts Alg.getBalance2(public_key_1, blockchain_pid_1)
+    #IO.puts "initial node 2 balance: \n"
+    #IO.puts Alg.getBalance(public_key_2, blockchain_pid_2)
     
     {:ok, pid2} = BitNode.start(1000)
     blockchain_pid_2 = GenServer.call(pid2, :blockchain_pid)
     public_key_2 = GenServer.call(pid2, :public_key)
 
-    :timer.sleep(100)
+    IO.puts "initial node 2 balance: \n"
+    IO.puts Alg.getBalance2(public_key_2, blockchain_pid_2)
+
+
+    #IO.puts "Initial block chain: \n"
+    #Alg.printBlockChain(blockchain_pid_1)
+
+    :timer.sleep(10)
+    IO.puts "Transaction: node 1 to node 2, amount 10, trans_fee 2 \n"
     GenServer.cast(pid1, {:ask_transaction, pid2, 10, 2})
-    :timer.sleep(2500)
+    #:timer.sleep(2500)
+    
+    '''
+    IO.puts "New block chain: \n"
     Alg.printBlockChain(blockchain_pid_1)
-    Alg.printBlockChain(blockchain_pid_2)
+    #Alg.printBlockChain(blockchain_pid_2)
+    IO.puts "final node 1 balance: \n"
     IO.puts Alg.getBalance(public_key_1, blockchain_pid_1)
-    IO.puts ""
+    IO.puts "final node 2 balance: \n"
     IO.puts Alg.getBalance(public_key_2, blockchain_pid_2)
+    '''
     #GenServer.cast(pid1, {:ask_transaction, pid2, 0, 0})
     
     #:timer.sleep(1000)
@@ -95,7 +118,7 @@ defmodule Project41.CLI do
     #:timer.sleep(1000)
     #Alg.printBlockChain(blockchain_pid_1)
     #IO.puts Alg.getBalance(blockchain_pid_1, public_key_1)
-    loop()
+    loop(blockchain_pid_1, blockchain_pid_2, public_key_1, public_key_2)
   end
   """
   def waitNetworkFinish(net_pid) do

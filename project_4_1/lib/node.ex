@@ -120,8 +120,9 @@ defmodule BitNode do
 			prev_hash = Alg.hashTransaction(Map.get(state, :prev_transaction))
 			sign = Alg.signTransaction(private_key, prev_hash, target_public_key)
 			nodes = Map.get(state, :nodes)
-			new_tx = Alg.generateTransaction(public_key, target_public_key, amount, fee, Map.get(state, :block_server))
+			new_tx = Alg.generateTransaction(public_key, target_public_key, sign, amount, fee, Map.get(state, :block_server))
 			if new_tx != nil do
+				GenServer.cast(self(), {:new_tx, new_tx})
 				broadcast({:new_tx, new_tx})
 			end
 		end
@@ -134,8 +135,8 @@ defmodule BitNode do
 
 	#create new block, empty txs
 	def handle_info(:time_up, state) do
-		IO.inspect self()
-		IO.puts('time up')
+		#IO.inspect self()
+		#IO.puts('time up')
 		state = 
 			if Map.get(state, :initialized) do
 				interval = Map.get(state, :flush_interval)
@@ -232,12 +233,12 @@ defmodule BitNode do
 		end
 	end
 
-	'''
 	def handle_cast({:tx_failed, tx}, state) do
 		#TODO
+		IO.puts "transaction_failed: "
+		IO.inspect tx
 		{:noreply, state}
 	end
-	'''
 
 	def handle_cast(:process, state) do
 		queue = Map.get(state, :queue)
