@@ -12,7 +12,10 @@ defmodule Project41.CLI do
     else
       #nodes_list = []
       #nodes_list = add_nodes(num_nodes, nodes_list)
-      testChain()
+      Test.testAlg()
+
+      #testChain()
+
       '''
       #Manager.start(num_nodes)
       t = %Transaction{}
@@ -82,7 +85,7 @@ defmodule Project41.CLI do
     #Alg.printObject(t)
     b = Alg.generateBlock(blockchain_pid_1, [], 0, 0, public_key_1, 25, "")
     Alg.appendBlock(blockchain_pid_1, b)
-    
+
     {:ok, pid2} = BitNode.start()
     blockchain_pid_2 = GenServer.call(pid2, :blockchain_pid)
     public_key_2 = GenServer.call(pid2, :public_key)
@@ -117,7 +120,7 @@ defmodule Project41.CLI do
     GenServer.cast(pid1, {:ask_transaction, pid2, 10, 2})
 
     GenServer.cast(pid1, :start_mining)
-    
+
     '''
     IO.puts "New block chain: \n"
     Alg.printBlockChain(blockchain_pid_1)
@@ -128,7 +131,7 @@ defmodule Project41.CLI do
     IO.puts Alg.getBalance(public_key_2, blockchain_pid_2)
     '''
     #GenServer.cast(pid1, {:ask_transaction, pid2, 0, 0})
-    
+
     #:timer.sleep(1000)
     #Alg.printBlockChain(blockchain_pid_1)
     #:timer.sleep(1000)
