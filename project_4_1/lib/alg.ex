@@ -98,7 +98,7 @@ defmodule Alg do
 
   def getAllTransFee(transactions, res) do
     if transactions != [] do
-      res = res + Enum.at(hd(transactions).outputs, 2) # outputs[2] is the transaction fee
+      res = res + Enum.at(hd(transactions).outputs, 2).value # outputs[2] is the transaction fee
       getAllTransFee(tl(transactions), res)
     else
       res
@@ -111,7 +111,7 @@ defmodule Alg do
     %Transaction{sender: "", receiver: miner_hash, num_inputs: 0, inputs: [], num_outputs: 1, outputs: [actual_output], trans_fee: 0, signature: ""}
   end
 
-  def generateTransaction(sender_hash, receiver_hash, trans_amount, trans_fee, blockchain_pid) do
+  def generateTransaction(sender_hash, receiver_hash, signature, trans_amount, trans_fee, blockchain_pid) do
     # blockchain_pid is the PID of blockchain GenServer of current node
     # Each node uses a GenServer to manage its local blockchain copy
     tail_block = getTailBlock(blockchain_pid)
@@ -123,7 +123,7 @@ defmodule Alg do
       actual_output = %Transaction.Output{receiver: receiver_hash, value: trans_amount, is_spent: false}
       change_output = %Transaction.Output{receiver: sender_hash, value: final_inputs_amount - trans_amount - trans_fee, is_spent: false}
       trans_fee_output = %Transaction.Output{receiver: "", value: trans_fee, is_spent: false}
-      %Transaction{sender: sender_hash, receiver: receiver_hash, num_inputs: length(final_inputs), inputs: final_inputs, num_outputs: 3, outputs: [actual_output, change_output, trans_fee_output], trans_fee: trans_fee, signature: ""}
+      %Transaction{sender: sender_hash, receiver: receiver_hash, num_inputs: length(final_inputs), inputs: final_inputs, num_outputs: 3, outputs: [actual_output, change_output, trans_fee_output], trans_fee: trans_fee, signature: signature}
     end
   end
 
@@ -272,20 +272,43 @@ defmodule Alg do
   end
   """
 
-  def getBalance(owner, blockchain_pid) do
+  def getBalance2(owner, blockchain_pid) do
     getBalance(owner, getTailBlock(blockchain_pid), blockchain_pid, MapSet.new(), 0)
   end
-
+  def getBalance(owner, tail_block, blockchain_pid, input_src, balance) do
+    if tail_block != nil do # not yet arrived at head of the blockchain, then continue
+      {new_balance, input_src} = getBalanceInOneBlock(owner, tail_block, 0, input_src, 0)
+      prev_block = getPrevBlock(tail_block, blockchain_pid)
+      IO.puts "Here block: "<> inspect(prev_block)
+      IO.puts "HereHere Balance" <> inspect(balance+new_balance)
+      getBalance(owner, prev_block, blockchain_pid, input_src, balance+new_balance)
+    else
+      balance
+    end
+  end
+  """
   def getBalance(owner, tail_block, blockchain_pid, input_src, balance) do
     if tail_block != nil do # not yet arrived at head of the blockchain, then continue
       {balance, input_src} = getBalanceInOneBlock(owner, tail_block, 0, input_src, balance)
       prev_block = getPrevBlock(tail_block, blockchain_pid)
+      IO.puts "Here block: "<> inspect(prev_block)
+      IO.puts "HereHere Balance" <> inspect(balance)
       getBalance(owner, prev_block, blockchain_pid, input_src, balance)
     else
       balance
     end
   end
-
+  """
+  def getBalanceInOneBlock(owner, block, trans_index, input_src, balance) do
+    if trans_index < block.num_trans do # not yet arrived end of current block, then continue
+      cur_trans = Enum.at(block.trans, trans_index)
+      {new_balance, input_src} = getBalanceInOneTransaction(owner, cur_trans, 0, input_src, 0)
+      getBalanceInOneBlock(owner, block, trans_index + 1, input_src, balance+new_balance)
+    else
+      {balance, input_src}
+    end
+  end
+  """
   def getBalanceInOneBlock(owner, block, trans_index, input_src, balance) do
     if trans_index < block.num_trans do # not yet arrived end of current block, then continue
       cur_trans = Enum.at(block.trans, trans_index)
@@ -295,14 +318,16 @@ defmodule Alg do
       {balance, input_src}
     end
   end
-
+  """
   def getBalanceInOneTransaction(owner, transaction, output_index, input_src, balance) do
     # input_src is the sources of inputs, that is, the previous outputs. Here it is the same stuff with "inputs_after_it" in isSpentOutput().
     if output_index < transaction.num_outputs do # not yet arrived end of current transaction, then continue
       cur_output = Enum.at(transaction.outputs, output_index)
       if cur_output.receiver == owner and !isSpentOutput(transaction, output_index, input_src) do # if this output belongs to this account owner and has NOT been spent, it will be counted into balance.
         input_src = MapSet.put(input_src, {hashTransaction(transaction), output_index})
+        
         balance = balance + cur_output.value
+        IO.puts "Here balance: "<> inspect(balance)
         getBalanceInOneTransaction(owner, transaction, output_index + 1, input_src, balance)
       else # This output cannot be counted into balance, so we just skip it.
         getBalanceInOneTransaction(owner, transaction, output_index + 1, input_src, balance)
