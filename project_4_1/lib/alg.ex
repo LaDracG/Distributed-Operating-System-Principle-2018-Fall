@@ -140,7 +140,8 @@ defmodule Alg do
   def generateTransInputsInOneBlock(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, block, trans_index, input_src) do
     if trans_index < block.num_trans and cur_inputs_amount < trans_amount + trans_fee do # no enough inputs and not yet arrived end of current block, then continue
       cur_trans = Enum.at(block.trans, trans_index)
-      {cur_inputs_amount, cur_inputs, input_src} = generateTransInputsInOneTransaction(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, cur_trans, 0, input_src)
+      input_src = getSpentOutputsInOneTransaction(sender_hash, cur_trans, 0, input_src)
+      {cur_inputs_amount, cur_inputs} = generateTransInputsInOneTransaction(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, cur_trans, 0, input_src)
       generateTransInputsInOneBlock(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, block, trans_index + 1, input_src)
     else
       {cur_inputs_amount, cur_inputs, input_src}
@@ -152,7 +153,7 @@ defmodule Alg do
     if output_index < transaction.num_outputs and cur_inputs_amount < trans_amount + trans_fee do # no enough inputs and not yet arrived end of current transaction, then continue
       cur_output = Enum.at(transaction.outputs, output_index)
       if cur_output.receiver == sender_hash and !isSpentOutput(transaction, output_index, input_src) do # if this output belongs to sender and has NOT been spent, sender can use it.
-        input_src = MapSet.put(input_src, {hashTransaction(transaction), output_index})
+        #input_src = MapSet.put(input_src, {hashTransaction(transaction), output_index})
         new_input = %Transaction.Input{prev_trans_hash: hashTransaction(transaction), prev_output_index: output_index}
         cur_inputs = cur_inputs ++ [new_input]
         cur_inputs_amount = cur_inputs_amount + cur_output.value
@@ -161,7 +162,19 @@ defmodule Alg do
         generateTransInputsInOneTransaction(sender_hash, cur_inputs_amount, cur_inputs, trans_amount, trans_fee, transaction, output_index + 1, input_src)
       end
     else
-      {cur_inputs_amount, cur_inputs, input_src}
+      {cur_inputs_amount, cur_inputs}
+    end
+  end
+
+  def getSpentOutputsInOneTransaction(owner, transaction, input_index, input_src) do
+    if transaction.sender == owner and input_index < transaction.num_inputs do # not yet arrived at the end of inputs in this trans, and its sender is the owner, then we count source of this input as a spent output of the owner.
+      # If sender is the owner, then all inputs in this trans must come from the owner's previous unspent outputs.
+      # So at this time we just put sources of all the inputs to input_src.
+      cur_input = Enum.at(transaction.inputs, input_index)
+      input_src = MapSet.put(input_src, {cur_input.prev_trans_hash, cur_input.prev_output_index})
+      getSpentOutputsInOneTransaction(owner, transaction, input_index + 1, input_src)
+    else
+      input_src
     end
   end
 
@@ -272,47 +285,53 @@ defmodule Alg do
   end
   """
 
-  def getBalance2(owner, blockchain_pid) do
+  def getBalance(owner, blockchain_pid) do
     getBalance(owner, getTailBlock(blockchain_pid), blockchain_pid, MapSet.new(), 0)
   end
+
   def getBalance(owner, tail_block, blockchain_pid, input_src, balance) do
     if tail_block != nil do # not yet arrived at head of the blockchain, then continue
-      {new_balance, input_src} = getBalanceInOneBlock(owner, tail_block, 0, input_src, 0)
+      {balance_in_cur_block, input_src} = getBalanceInOneBlock(owner, tail_block, 0, input_src, 0)
       prev_block = getPrevBlock(tail_block, blockchain_pid)
-      IO.puts "Here block: "<> inspect(prev_block)
-      IO.puts "HereHere Balance" <> inspect(balance+new_balance)
-      getBalance(owner, prev_block, blockchain_pid, input_src, balance+new_balance)
+      #IO.puts "Here block: "<> inspect(prev_block)
+      #IO.puts "HereHere Balance" <> inspect(balance+new_balance)
+      getBalance(owner, prev_block, blockchain_pid, input_src, balance + balance_in_cur_block)
     else
       balance
     end
   end
+
   """
   def getBalance(owner, tail_block, blockchain_pid, input_src, balance) do
     if tail_block != nil do # not yet arrived at head of the blockchain, then continue
       {balance, input_src} = getBalanceInOneBlock(owner, tail_block, 0, input_src, balance)
       prev_block = getPrevBlock(tail_block, blockchain_pid)
-      IO.puts "Here block: "<> inspect(prev_block)
-      IO.puts "HereHere Balance" <> inspect(balance)
+      #IO.puts "Here block: "<> inspect(prev_block)
+      #IO.puts "HereHere Balance" <> inspect(balance)
       getBalance(owner, prev_block, blockchain_pid, input_src, balance)
     else
       balance
     end
   end
   """
+
   def getBalanceInOneBlock(owner, block, trans_index, input_src, balance) do
     if trans_index < block.num_trans do # not yet arrived end of current block, then continue
       cur_trans = Enum.at(block.trans, trans_index)
-      {new_balance, input_src} = getBalanceInOneTransaction(owner, cur_trans, 0, input_src, 0)
-      getBalanceInOneBlock(owner, block, trans_index + 1, input_src, balance+new_balance)
+      input_src = getSpentOutputsInOneTransaction(owner, cur_trans, 0, input_src)
+      balance_in_cur_trans = getBalanceInOneTransaction(owner, cur_trans, 0, input_src, 0)
+      getBalanceInOneBlock(owner, block, trans_index + 1, input_src, balance + balance_in_cur_trans)
     else
       {balance, input_src}
     end
   end
+
   """
   def getBalanceInOneBlock(owner, block, trans_index, input_src, balance) do
     if trans_index < block.num_trans do # not yet arrived end of current block, then continue
       cur_trans = Enum.at(block.trans, trans_index)
-      {balance, input_src} = getBalanceInOneTransaction(owner, cur_trans, 0, input_src, balance)
+      input_src = getSpentOutputsInOneTransaction(owner, cur_trans, 0, input_src)
+      balance = getBalanceInOneTransaction(owner, cur_trans, 0, input_src, balance)
       getBalanceInOneBlock(owner, block, trans_index + 1, input_src, balance)
     else
       {balance, input_src}
@@ -324,16 +343,15 @@ defmodule Alg do
     if output_index < transaction.num_outputs do # not yet arrived end of current transaction, then continue
       cur_output = Enum.at(transaction.outputs, output_index)
       if cur_output.receiver == owner and !isSpentOutput(transaction, output_index, input_src) do # if this output belongs to this account owner and has NOT been spent, it will be counted into balance.
-        input_src = MapSet.put(input_src, {hashTransaction(transaction), output_index})
-        
+        #input_src = MapSet.put(input_src, {hashTransaction(transaction), output_index})
         balance = balance + cur_output.value
-        IO.puts "Here balance: "<> inspect(balance)
+        #IO.puts "Here balance: "<> inspect(balance)
         getBalanceInOneTransaction(owner, transaction, output_index + 1, input_src, balance)
       else # This output cannot be counted into balance, so we just skip it.
         getBalanceInOneTransaction(owner, transaction, output_index + 1, input_src, balance)
       end
     else
-      {balance, input_src}
+      balance
     end
   end
 
