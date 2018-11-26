@@ -3,8 +3,8 @@ defmodule BitNode do
 	@diff_target "0001"
 
 	def init(state) do
-		interval = Map.get(state, :flush_interval)
-		state = Map.replace!(state, :timer, Process.send_after(self(), :time_up, interval))
+		#interval = Map.get(state, :flush_interval)
+		#state = Map.replace!(state, :timer, Process.send_after(self(), :time_up, interval))
 		reg('bitcoin')
 		{public_key, private_key} = Alg.generateKeyPair()
 		state = Map.replace!(state, :public_key, public_key)
@@ -20,14 +20,15 @@ defmodule BitNode do
 		{:ok, state}
 	end
 
-	def start(flush_interval, first? \\ false) do
+	#def start(flush_interval, first? \\ false) do
+	def start(first? \\ false) do
 		{:ok, pid} = GenServer.start_link(
 						__MODULE__,
 						%{
-							:flush_interval => flush_interval,
+							#:flush_interval => flush_interval,
 							:txs => [], #cached transactions
 							:queue => [], #uncached transactions in priority queue
-							:timer => nil,
+							#:timer => nil,
 										#:current_tail => nil, #current tail of block list i.e. latest block
 							:public_key => nil, #hex string
 							:private_key => nil, #hex string
@@ -60,6 +61,10 @@ defmodule BitNode do
 		GenServer.call(self(), {:getBalance, owner})
 	end
 
+	def handle_call({:getPid, public_key}, from, state) do
+		{:reply, Map.get(Map.get(state, :r_nodes), public_key), state}
+	end
+
 	def handle_call({:getBalance, owner}, from, state) do
 		{:reply, Alg.getBalance(Map.get(state, :block_server), Map.get(Map.get(state, :nodes), owner)), state}
 	end
@@ -84,13 +89,15 @@ defmodule BitNode do
 		{:noreply, state}
 	end
 
-	def handle_cast({:rookie, nodes, r_nodes, block_table, tail, prev_transaction}, state) do
+	def handle_cast({:rookie, nodes, r_nodes, block_table, tail, prev_transaction, txs, queue}, state) do
 		state = 
 			if !Map.get(state, :initialized) do
 				state = Map.replace!(state, :nodes, nodes)
 				state = Map.replace!(state, :r_nodes, r_nodes)
 						#state = Map.replace!(state, :current_tail, current_tail)
 				state = Map.replace!(state, :prev_transaction, prev_transaction)
+				state = Map.replace!(state, :txs, txs)
+				state = Map.replace!(queue, :queue, queue)
 						#state = Map.replace!(state, :block_map, block_map)
 				block_server = Map.get(state, :block_server)
 				GenServer.cast(block_server, {:initialize, block_table, tail})
@@ -134,13 +141,13 @@ defmodule BitNode do
 	end
 
 	#create new block, empty txs
-	def handle_info(:time_up, state) do
+	def handle_cast(:start_mining, state) do
 		#IO.inspect self()
 		#IO.puts('time up')
 		state = 
 			if Map.get(state, :initialized) do
-				interval = Map.get(state, :flush_interval)
-				state = Map.replace!(state, :timer, Process.send_after(self(), :time_up, interval))
+				#interval = Map.get(state, :flush_interval)
+				#state = Map.replace!(state, :timer, Process.send_after(self(), :time_up, interval))
 				
 				txs = Map.get(state, :txs)
 				diff_target = @diff_target
@@ -173,6 +180,7 @@ defmodule BitNode do
 
 	def handle_cast({:new_block, block, prev_block_hash}, state) do
 		if Map.get(state, :initialized) do
+			IO.puts inspect(Map.get(state, :queue)) <> inspect(self())
 			prev_hash = Alg.hashBlock(Alg.getTailBlock(Map.get(state, :block_server)))
 			#IO.inspect prev_hash
 			if Alg.hashBlock(block) < @diff_target and prev_hash == prev_block_hash do
@@ -182,6 +190,7 @@ defmodule BitNode do
 					GenServer.cast(Map.get(state, :current_miner), :initialize)
 				end
 				res = Alg.appendBlock(Map.get(state, :block_server), block)
+				GenServer.cast(self(), :start_mining)
 			end
 		end
 		#IO.inspect Alg.hashBlock(Alg.getTailBlock(Map.get(state, :block_server)))
@@ -197,8 +206,10 @@ defmodule BitNode do
 				state = Map.replace!(state, :r_nodes, new_r_nodes)
 				prev_transaction = Map.get(state, :prev_transaction)
 				block_server = Map.get(state, :block_server)
+				txs = Map.get(state, :txs)
+				queue = Map.get(state, :queue)
 				{block_table, tail} = GenServer.call(block_server, :getBlockTable)
-				GenServer.cast(pid, {:rookie, new_nodes, new_r_nodes, block_table, tail, prev_transaction})
+				GenServer.cast(pid, {:rookie, new_nodes, new_r_nodes, block_table, tail, prev_transaction, txs, queue})
 				state
 			else
 				state
