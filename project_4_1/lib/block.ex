@@ -39,7 +39,7 @@ defmodule BlockChain do
   end
 
   def handle_call({:appendBlock, block}, from, state) do
-    state = Map.replace!(state, :tail, block)
+    #state = Map.replace!(state, :tail, block)
     block_table = Map.get(state, :block_table)
     block_table = Map.put(block_table, Alg.hashBlock(block), block)
     state = Map.replace!(state, :block_table, block_table)

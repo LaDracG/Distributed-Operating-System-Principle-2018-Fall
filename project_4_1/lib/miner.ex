@@ -16,15 +16,15 @@ defmodule BitNode.Miner do
 		pid
 	end
 
-	def handle_cast(:stop, state) do
-		state = 
+	def handle_call(:stop, from, state) do
+		{state, res} = 
 			if Map.get(state, :working) do
 				IO.puts "stopped"
-				Map.replace!(state, :enable_work, false)
+				{Map.replace!(state, :enable_work, false), true}
 			else
-				state
+				{state, false}
 			end
-		{:noreply, state}
+		{:reply, res, state}
 	end
 
 	def handle_cast(:initialize, state) do
@@ -33,21 +33,27 @@ defmodule BitNode.Miner do
 		{:noreply, state}
 	end
 
-	def handle_cast({:mine, block_server, txs, diff_target, miner_hash, prev_block_hash, pid}, state) do
+	def handle_cast({:mine, block_server, txs, diff_target, miner_hash, prev_block_hash, pid, new_block}, state) do
 		state = 
 			if Map.get(state, :enable_work) do
 				nonce = :rand.uniform()
-				block = Alg.generateBlock(block_server, txs, diff_target, nonce, miner_hash, @reward)
-				block_hash = Alg.hashBlock(block)
+				new_block = 
+					if new_block == nil do
+						Alg.generateBlock(block_server, txs, diff_target, nonce, miner_hash, @reward, prev_block_hash)
+					else
+						new_block
+					end
+				newer_block = Alg.updateBlockNonce(new_block, nonce)
+				block_hash = Alg.hashBlock(newer_block)
 				state = 
 					if !(block_hash < diff_target) do
 						state = Map.replace!(state, :working, true)
-						GenServer.cast(self(), {:mine, block_server, txs, diff_target, miner_hash, prev_block_hash, pid})
+						GenServer.cast(self(), {:mine, block_server, txs, diff_target, miner_hash, prev_block_hash, pid, newer_block})
 						state
 					else
-						#IO.puts "mining succeed"
-						GenServer.cast(pid, {:new_block, block, prev_block_hash})
-						GenServer.cast(pid, {:broadcast, {:new_block, block, prev_block_hash}})
+						IO.puts "mining succeed"
+						GenServer.cast(pid, {:new_block, newer_block, prev_block_hash})
+						GenServer.cast(pid, {:broadcast, {:new_block, newer_block, prev_block_hash}})
 						state = Map.replace!(state, :working, false)
 						state = Map.replace!(state, :enable_work, true)
 						state

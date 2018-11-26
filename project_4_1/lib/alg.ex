@@ -170,7 +170,7 @@ defmodule Alg do
     MapSet.member?(inputs_after_it, {hashTransaction(transaction), output_index})
   end
 
-  def getPrevBlock(blockchain_pid, cur_block) do
+  def getPrevBlock(cur_block, blockchain_pid) do
     #prev_block = GenServer.call(blockchain_pid, {:getBlock, cur_block.prev_hash})
     prev_block = getBlock(blockchain_pid, cur_block.header.prev_hash)
     prev_block
@@ -184,8 +184,9 @@ defmodule Alg do
     GenServer.call(blockchain_pid, {:getBlock, block_hash})
   end
 
-  def generateBlock(blockchain_pid, transactions, diff_target, nonce, miner_hash, reward) do
+  def generateBlock(blockchain_pid, transactions, diff_target, nonce, miner_hash, reward, prev_hash) do
     tail_block = getTailBlock(blockchain_pid)
+    
     #printObject(tail_block)
     #IO.puts "A"
     prev_hash =
@@ -201,6 +202,11 @@ defmodule Alg do
     block_header = %Block.Header{prev_hash: prev_hash, merkle_root: merkle_root, timestamp: timestamp, diff_target: diff_target, nonce: nonce}
     block = %Block{header: block_header, num_trans: length(transactions), trans: transactions}
     block
+  end
+
+  def updateBlockNonce(block, nonce) do
+    new_block_header = %{block.header | nonce: nonce}
+    %{block | header: new_block_header}
   end
 
   def appendBlock(blockchain_pid, block) do
@@ -220,7 +226,7 @@ defmodule Alg do
     if cur_block != nil do
       printObject(cur_block)
       #IO.puts "Here"
-      printBlockChainHelper(blockchain_pid, getPrevBlock(blockchain_pid, cur_block))
+      printBlockChainHelper(blockchain_pid, getPrevBlock(cur_block, blockchain_pid))
     end
   end
 
@@ -256,6 +262,10 @@ defmodule Alg do
     getBalanceInOutputs(owner, trans.outputs, 0)
   end
   """
+
+  def getBalance(owner, blockchain_pid) do
+    getBalance(owner, getTailBlock(blockchain_pid), blockchain_pid, MapSet.new(), 0)
+  end
 
   def getBalance(owner, tail_block, blockchain_pid, input_src, balance) do
     if tail_block != nil do # not yet arrived at head of the blockchain, then continue

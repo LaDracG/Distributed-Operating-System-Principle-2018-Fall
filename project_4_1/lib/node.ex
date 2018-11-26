@@ -1,6 +1,6 @@
 defmodule BitNode do
 	use GenServer
-	@diff_target "01"
+	@diff_target "0001"
 
 	def init(state) do
 		interval = Map.get(state, :flush_interval)
@@ -134,6 +134,8 @@ defmodule BitNode do
 
 	#create new block, empty txs
 	def handle_info(:time_up, state) do
+		IO.inspect self()
+		IO.puts('time up')
 		state = 
 			if Map.get(state, :initialized) do
 				interval = Map.get(state, :flush_interval)
@@ -143,13 +145,12 @@ defmodule BitNode do
 				diff_target = @diff_target
 				block_server = Map.get(state, :block_server)
 				miner_hash = Map.get(state, :public_key)
-				prev_block_hash = Alg.hashBlock(GenServer.call(block_server, :getTailBlock))
+				prev_block_hash = Alg.hashBlock(Alg.getTailBlock(block_server))
 				state = Map.replace!(state, :txs, [])
 
-				IO.puts('time up')
 				#{:ok, miner} = BitNode.Miner.start()
 				miner = Map.get(state, :current_miner)
-				GenServer.cast(miner, {:mine, block_server, txs, diff_target, miner_hash, prev_block_hash, self()})
+				GenServer.cast(miner, {:mine, block_server, txs, diff_target, miner_hash, prev_block_hash, self(), nil})
 				state
 			else
 				state
@@ -168,16 +169,21 @@ defmodule BitNode do
 		{:noreply, state}
 	end
 	'''
+
 	def handle_cast({:new_block, block, prev_block_hash}, state) do
 		if Map.get(state, :initialized) do
-			prev_hash = Alg.hashBlock(GenServer.call(Map.get(state, :block_server), :getTailBlock))
+			prev_hash = Alg.hashBlock(Alg.getTailBlock(Map.get(state, :block_server)))
+			#IO.inspect prev_hash
 			if Alg.hashBlock(block) < @diff_target and prev_hash == prev_block_hash do
-				IO.inspect self()
-				IO.inspect prev_block_hash
-				GenServer.cast(Map.get(state, :current_miner), :stop)
+				#IO.inspect self()
+				stopRes = GenServer.call(Map.get(state, :current_miner), :stop)
+				if !stopRes do
+					GenServer.cast(Map.get(state, :current_miner), :initialize)
+				end
 				res = Alg.appendBlock(Map.get(state, :block_server), block)
 			end
 		end
+		#IO.inspect Alg.hashBlock(Alg.getTailBlock(Map.get(state, :block_server)))
 		{:noreply, state}
 	end
 
@@ -213,7 +219,6 @@ defmodule BitNode do
 		{:noreply, state}
 	end
 
-	#TODO faster
 	def insert(queue, tx) do
 		if Enum.empty?(queue) do
 			[tx]
@@ -227,10 +232,12 @@ defmodule BitNode do
 		end
 	end
 
+	'''
 	def handle_cast({:tx_failed, tx}, state) do
 		#TODO
 		{:noreply, state}
 	end
+	'''
 
 	def handle_cast(:process, state) do
 		queue = Map.get(state, :queue)
