@@ -186,7 +186,7 @@ defmodule Alg do
 
   def generateBlock(blockchain_pid, transactions, diff_target, nonce, miner_hash, reward, prev_hash) do
     tail_block = getTailBlock(blockchain_pid)
-    
+
     #printObject(tail_block)
     #IO.puts "A"
     prev_hash =
@@ -217,6 +217,13 @@ defmodule Alg do
     IO.puts inspect Map.from_struct(object)
   end
 
+  def printObjectList(obj_list) do
+    if obj_list != [] do
+      printObject(hd(obj_list))
+      printObjectList(tl(obj_list))
+    end
+  end
+
   def printBlockChain(blockchain_pid) do
     tail_block = getTailBlock(blockchain_pid)
     printBlockChainHelper(blockchain_pid, tail_block)
@@ -224,7 +231,9 @@ defmodule Alg do
 
   def printBlockChainHelper(blockchain_pid, cur_block) do
     if cur_block != nil do
-      printObject(cur_block)
+      printObject(cur_block.header)
+      IO.puts "Number of transactions: " <> inspect(cur_block.num_trans)
+      printObjectList(cur_block.trans)
       #IO.puts "Here"
       printBlockChainHelper(blockchain_pid, getPrevBlock(cur_block, blockchain_pid))
     end
