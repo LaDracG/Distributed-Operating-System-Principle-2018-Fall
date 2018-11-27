@@ -3,8 +3,6 @@ defmodule BitNode do
 	@diff_target "0001"
 
 	def init(state) do
-		#interval = Map.get(state, :flush_interval)
-		#state = Map.replace!(state, :timer, Process.send_after(self(), :time_up, interval))
 		reg('bitcoin')
 		{public_key, private_key} = Alg.generateKeyPair()
 		state = Map.replace!(state, :public_key, public_key)
@@ -14,29 +12,19 @@ defmodule BitNode do
 		state = Map.replace!(state, :nodes, new_nodes)
 		state = Map.replace!(state, :r_nodes, new_r_nodes)
 		broadcast({:new_node, self(), public_key})
-		if Map.get(state, :first?) do
-			GenServer.cast(self(), :process)
-		end
 		{:ok, state}
 	end
 
-	#def start(flush_interval, first? \\ false) do
 	def start(first? \\ false) do
 		{:ok, pid} = GenServer.start_link(
 						__MODULE__,
 						%{
-							#:flush_interval => flush_interval,
-							:txs => [], #cached transactions
-							:queue => [], #uncached transactions in priority queue
-							#:timer => nil,
-										#:current_tail => nil, #current tail of block list i.e. latest block
+							:queue => BitNode.Queue.start(self()),
 							:public_key => nil, #hex string
 							:private_key => nil, #hex string
 							:nodes => %{}, #pid => public key
 							:r_nodes => %{}, #public key => pid
 							:block_server => BlockChain.start(),
-										#:block_map => %{}, #map of block chain, hash_value => block
-							:prev_transaction => %Transaction{}, #nil, #Transaction struct
 							:initialized => if first? do
 												true
 											else
@@ -80,14 +68,12 @@ defmodule BitNode do
 		{:reply, Map.get(state, :block_server), state}
 	end
 
-	def handle_cast({:init_prev_tx, tx}, state) do
-		state = 
-			if Map.get(state, :first?) do 
-				Map.replace!(state, :prev_transaction, tx)
-			else
-				state
-			end
-		{:noreply, state}
+	def handle_call(:prev_transaction, from, state) do
+		{:reply, Map.get(state, :prev_transaction), state}
+	end
+
+	def handle_call(:public_key, from, state) do
+		{:reply, Map.get(state, :public_key), state}
 	end
 
 	def handle_cast({:rookie, nodes, r_nodes, block_table, tail, prev_transaction, txs, queue}, state) do
@@ -95,15 +81,12 @@ defmodule BitNode do
 			if !Map.get(state, :initialized) do
 				state = Map.replace!(state, :nodes, nodes)
 				state = Map.replace!(state, :r_nodes, r_nodes)
-						#state = Map.replace!(state, :current_tail, current_tail)
-				state = Map.replace!(state, :prev_transaction, prev_transaction)
-				state = Map.replace!(state, :txs, txs)
-				state = Map.replace!(state, :queue, queue)
-						#state = Map.replace!(state, :block_map, block_map)
-				block_server = Map.get(state, :block_server)
-				GenServer.cast(block_server, {:initialize, block_table, tail})
+				#state = Map.replace!(state, :prev_transaction, prev_transaction)
+				GenServer.cast(Map.get(state, :block_server), {:initialize, block_table, tail})
+				GenServer.cast(Map.get(state, :queue), {:set_txs, txs})
+				GenServer.cast(Map.get(state, :queue), {:set_queue, queue})
+				GenServer.cast(Map.get(state, :queue), {:set_prev_transaction, prev_transaction})
 				state = Map.replace!(state, :initialized, true)
-				#GenServer.cast(self(), :process)
 				state
 			else
 				state
@@ -125,7 +108,8 @@ defmodule BitNode do
 			target_public_key = Map.get(Map.get(state, :nodes), target)
 			public_key = Map.get(state, :public_key)
 			private_key = Map.get(state, :private_key)
-			prev_hash = Alg.hashTransaction(Map.get(state, :prev_transaction))
+			prev_transaction = GenServer.call(Map.get(state, :queue), :get_prev_transaction)
+			prev_hash = Alg.hashTransaction(prev_transaction)
 			sign = Alg.signTransaction(private_key, prev_hash, target_public_key)
 			nodes = Map.get(state, :nodes)
 			new_tx = Alg.generateTransaction(public_key, target_public_key, sign, amount, fee, Map.get(state, :block_server))
@@ -137,26 +121,17 @@ defmodule BitNode do
 		{:noreply, state}
 	end
 
-	def handle_call(:public_key, from, state) do
-		{:reply, Map.get(state, :public_key), state}
-	end
-
 	#create new block, empty txs
 	def handle_cast(:start_mining, state) do
 		#IO.inspect self()
 		#IO.puts inspect(self()) <> "Start mining.."
 		state = 
 			if Map.get(state, :initialized) do
-				#interval = Map.get(state, :flush_interval)
-				#state = Map.replace!(state, :timer, Process.send_after(self(), :time_up, interval))
-				txs = Map.get(state, :txs)
+				txs = GenServer.call(Map.get(state, :queue), :deliver_txs)
 				diff_target = @diff_target
 				block_server = Map.get(state, :block_server)
 				miner_hash = Map.get(state, :public_key)
 				prev_block_hash = Alg.hashBlock(Alg.getTailBlock(block_server))
-				state = Map.replace!(state, :txs, [])
-
-				#{:ok, miner} = BitNode.Miner.start()
 				miner = Map.get(state, :current_miner)
 				GenServer.cast(miner, {:mine, block_server, txs, diff_target, miner_hash, prev_block_hash, self(), nil})
 				state
@@ -167,19 +142,25 @@ defmodule BitNode do
 	end
 
 	def handle_cast({:new_block, block, prev_block_hash}, state) do
+		state = 
 		if Map.get(state, :initialized) do
 			#IO.puts inspect(Map.get(state, :queue)) <> inspect(self())
 			prev_hash = Alg.hashBlock(Alg.getTailBlock(Map.get(state, :block_server)))
 			#IO.inspect prev_hash
-			if Alg.hashBlock(block) < @diff_target and prev_hash == prev_block_hash do
-				#IO.inspect self()
-				stopRes = GenServer.call(Map.get(state, :current_miner), :stop)
-				if !stopRes do
-					GenServer.cast(Map.get(state, :current_miner), :initialize)
+			state = 
+				if Alg.hashBlock(block) < @diff_target and prev_hash == prev_block_hash do
+					#IO.inspect self()
+					stopRes = GenServer.call(Map.get(state, :current_miner), :stop)
+					if !stopRes do
+						GenServer.cast(Map.get(state, :current_miner), :initialize)
+					end
+					res = Alg.appendBlock(Map.get(state, :block_server), block)
+					GenServer.cast(Map.get(state, :queue), {:set_prev_transaction, Enum.at(block.trans, 0)})
+					#state = Map.replace!(state, :prev_transaction, Enum.at(block.trans, 0))
+					GenServer.cast(self(), :start_mining)
+					state
 				end
-				res = Alg.appendBlock(Map.get(state, :block_server), block)
-				GenServer.cast(self(), :start_mining)
-			end
+			state
 		end
 		#IO.inspect Alg.hashBlock(Alg.getTailBlock(Map.get(state, :block_server)))
 		{:noreply, state}
@@ -192,10 +173,10 @@ defmodule BitNode do
 				new_r_nodes = Map.put(Map.get(state, :r_nodes), public_key, pid)
 				state = Map.replace!(state, :nodes, new_nodes)
 				state = Map.replace!(state, :r_nodes, new_r_nodes)
-				prev_transaction = Map.get(state, :prev_transaction)
+				prev_transaction = GenServer.call(Map.get(state, :queue), :get_prev_transaction)
 				block_server = Map.get(state, :block_server)
-				txs = Map.get(state, :txs)
-				queue = Map.get(state, :queue)
+				txs = GenServer.call(Map.get(state, :queue), :get_txs)
+				queue = GenServer.call(Map.get(state, :queue), :get_queue)
 				{block_table, tail} = GenServer.call(block_server, :getBlockTable)
 				GenServer.cast(pid, {:rookie, new_nodes, new_r_nodes, block_table, tail, prev_transaction, txs, queue})
 				state
@@ -207,64 +188,15 @@ defmodule BitNode do
 
 	# record new transaction
 	def handle_cast({:new_tx, new_tx}, state) do
-		state = 
-			if Map.get(state, :initialized) do
-				queue = Map.get(state, :queue)
-				queue = insert(queue, new_tx)
-				state = Map.replace!(state, :queue, queue)
-				state
-			else
-				state
-			end
-		{:noreply, state}
-	end
-
-	def insert(queue, tx) do
-		if Enum.empty?(queue) do
-			[tx]
-		else
-			[max | rest] = queue
-			if tx.trans_fee > max.trans_fee do
-				[tx | queue]
-			else
-				[max | insert(rest, tx)]
-			end
+		if Map.get(state, :initialized) do
+			GenServer.cast(Map.get(state, :queue), {:insert, new_tx})
 		end
+		{:noreply, state}
 	end
 
 	def handle_cast({:tx_failed, tx}, state) do
 		#IO.puts "transaction_failed"
 		#IO.inspect tx
-		{:noreply, state}
-	end
-
-	def handle_cast(:process, state) do
-		queue = Map.get(state, :queue)
-		state = 
-			if !Enum.empty?(queue) do
-				new_tx = List.first(queue)
-				queue = List.delete_at(queue, 0)
-				state = Map.replace!(state, :queue, queue)
-				sign = new_tx.signature
-				sender_public_key = new_tx.sender
-				receiver_public_key = new_tx.receiver
-				prev_hash = Alg.hashTransaction(Map.get(state, :prev_transaction))
-				sender = Map.get(Map.get(state, :r_nodes), sender_public_key)
-				state = 
-					if Alg.verifyTransaction(sign, sender_public_key, prev_hash, receiver_public_key) do
-						new_txs = Map.get(state, :txs) ++ [new_tx]
-						state = Map.replace!(state, :txs, new_txs)
-						state = Map.replace!(state, :prev_transaction, new_tx)
-						state
-					else
-						GenServer.cast(sender, {:tx_failed, new_tx})
-						state
-					end
-				state
-			else
-				state
-			end
-		GenServer.cast(self(), :process)
 		{:noreply, state}
 	end
 

@@ -65,14 +65,14 @@ defmodule Test.Node do
     def testCheckBalance(pid) do
       public_key = GenServer.call(pid, :public_key)
       blockchain_pid = GenServer.call(pid, :blockchain_pid)
-      IO.puts inspect(pid) <> "balance: "
+      IO.puts inspect(pid) <> " balance: "
       IO.puts inspect Alg.getBalance(public_key, blockchain_pid)
     end
 
     # print the blockchain stored in a node
     def testCheckBlockchain(pid) do
       blockchain_pid = GenServer.call(pid, :blockchain_pid)
-      IO.puts inspect(pid) <> "blockchain: "
+      IO.puts inspect(pid) <> " blockchain: "
       Alg.printBlockChain(blockchain_pid)
     end
 
