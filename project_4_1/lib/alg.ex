@@ -239,17 +239,16 @@ defmodule Alg do
 
   def printBlockChain(blockchain_pid) do
     tail_block = getTailBlock(blockchain_pid)
-    printBlockChainHelper(blockchain_pid, tail_block, 1)
+    printBlockChainHelper(blockchain_pid, tail_block)
   end
 
-  def printBlockChainHelper(blockchain_pid, cur_block, index) do
+  def printBlockChainHelper(blockchain_pid, cur_block) do
     if cur_block != nil do
-      IO.puts inspect(index) <> "th block"
       printObject(cur_block.header)
       IO.puts "Number of transactions: " <> inspect(cur_block.num_trans)
       printObjectList(cur_block.trans)
       #IO.puts "Here"
-      printBlockChainHelper(blockchain_pid, getPrevBlock(cur_block, blockchain_pid), index + 1)
+      printBlockChainHelper(blockchain_pid, getPrevBlock(cur_block, blockchain_pid))
     end
   end
 
