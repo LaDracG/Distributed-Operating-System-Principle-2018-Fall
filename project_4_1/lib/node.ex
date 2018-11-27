@@ -45,6 +45,7 @@ defmodule BitNode do
 							:current_miner => BitNode.Miner.start(),
 							:first? => first?
 						})
+		pid
 	end
 
 	def reg(topic) do
@@ -97,7 +98,7 @@ defmodule BitNode do
 						#state = Map.replace!(state, :current_tail, current_tail)
 				state = Map.replace!(state, :prev_transaction, prev_transaction)
 				state = Map.replace!(state, :txs, txs)
-				state = Map.replace!(queue, :queue, queue)
+				state = Map.replace!(state, :queue, queue)
 						#state = Map.replace!(state, :block_map, block_map)
 				block_server = Map.get(state, :block_server)
 				GenServer.cast(block_server, {:initialize, block_table, tail})
@@ -143,12 +144,11 @@ defmodule BitNode do
 	#create new block, empty txs
 	def handle_cast(:start_mining, state) do
 		#IO.inspect self()
-		#IO.puts('time up')
+		#IO.puts inspect(self()) <> "Start mining.."
 		state = 
 			if Map.get(state, :initialized) do
 				#interval = Map.get(state, :flush_interval)
 				#state = Map.replace!(state, :timer, Process.send_after(self(), :time_up, interval))
-				
 				txs = Map.get(state, :txs)
 				diff_target = @diff_target
 				block_server = Map.get(state, :block_server)
@@ -166,21 +166,9 @@ defmodule BitNode do
 		{:noreply, state}
 	end
 
-	'''
-	def handle_cast({:new_block, block_hash, block}, state) do
-		block_map = Map.get(state, :block_map)
-		if !Map.has_key?(block_map, block_hash) do
-			block_map = Map.put(block_map, block_hash, block)
-			state = Map.replace!(state, :block_map, block_map)
-			state = Map.replace!(state, :current_tail, block_hash)
-		end
-		{:noreply, state}
-	end
-	'''
-
 	def handle_cast({:new_block, block, prev_block_hash}, state) do
 		if Map.get(state, :initialized) do
-			IO.puts inspect(Map.get(state, :queue)) <> inspect(self())
+			#IO.puts inspect(Map.get(state, :queue)) <> inspect(self())
 			prev_hash = Alg.hashBlock(Alg.getTailBlock(Map.get(state, :block_server)))
 			#IO.inspect prev_hash
 			if Alg.hashBlock(block) < @diff_target and prev_hash == prev_block_hash do
@@ -245,9 +233,8 @@ defmodule BitNode do
 	end
 
 	def handle_cast({:tx_failed, tx}, state) do
-		#TODO
-		IO.puts "transaction_failed: "
-		IO.inspect tx
+		#IO.puts "transaction_failed"
+		#IO.inspect tx
 		{:noreply, state}
 	end
 

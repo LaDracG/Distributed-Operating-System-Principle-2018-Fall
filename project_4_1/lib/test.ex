@@ -11,9 +11,82 @@ defmodule Test do
     Test.Alg.testGetBalance()
   end
 
-  def testXXX() do
-    # TODO
+  def testBitCoin() do
+    node_list = Test.Node.testStartNode(3)
+    Test.Node.loop(node_list)
   end
+end
+
+defmodule Test.Node do
+    # start a single node and return its pid
+    def testStartNode() do
+      {:ok, _} = Registry.start_link(keys: :duplicate, name: Registry.PubSubTest, partitions: System.schedulers_online) # essential
+      pid = BitNode.start(true)
+      blockchain_pid = GenServer.call(pid, :blockchain_pid)
+      public_key = GenServer.call(pid, :public_key)
+      b = Alg.generateBlock(blockchain_pid, [], 0, 0, public_key, 25, "")
+      Alg.appendBlock(blockchain_pid, b)
+      GenServer.cast(pid, :start_mining)
+      pid
+    end
+
+    # start nodes of number nodenum, return the nodes' pids as a list
+    def testStartNode(nodenum) do
+      {:ok, _} = Registry.start_link(keys: :duplicate, name: Registry.PubSubTest, partitions: System.schedulers_online) # essential
+      first_pid = BitNode.start(true)
+      blockchain_pid = GenServer.call(first_pid, :blockchain_pid)
+      public_key = GenServer.call(first_pid, :public_key)
+      b = Alg.generateBlock(blockchain_pid, [], 0, 0, public_key, 25, "")
+      Alg.appendBlock(blockchain_pid, b)
+      
+      node_list = []
+      node_list = 
+        if nodenum >= 2 do
+            for _ <- 2..nodenum do
+              BitNode.start()
+            end
+        end
+      node_list = [first_pid] ++ node_list
+      IO.puts inspect node_list
+      GenServer.cast(first_pid, :start_mining)
+      node_list
+    end
+
+    # start a transaction with random sender, receiver, transaction amount and transaction fee
+    def testRandomTransaction(node_list) do
+      sender = Enum.at(node_list, Enum.random(0..length(node_list) - 1))
+      receiver = Enum.at(node_list, Enum.random(0..length(node_list) - 1))
+      amount = :rand.uniform() * 10 |> Float.round(2)
+      trans_fee = amount * :rand.uniform() |> Float.round(2)
+      GenServer.cast(sender, {:ask_transaction, receiver, amount, trans_fee})
+    end
+
+    # print the balance of a node
+    def testCheckBalance(pid) do
+      public_key = GenServer.call(pid, :public_key)
+      blockchain_pid = GenServer.call(pid, :blockchain_pid)
+      IO.puts inspect(pid) <> "balance: "
+      IO.puts inspect Alg.getBalance(public_key, blockchain_pid)
+    end
+
+    # print the blockchain stored in a node
+    def testCheckBlockchain(pid) do
+      blockchain_pid = GenServer.call(pid, :blockchain_pid)
+      IO.puts inspect(pid) <> "blockchain: "
+      Alg.printBlockChain(blockchain_pid)
+    end
+
+    # start a random transaction every 1.5s, and check each node's current balance
+    # transaction may fail, when transaction amount is larger than sender's balance
+    def loop(node_list) do
+      :timer.sleep(1500)
+      Test.Node.testRandomTransaction(node_list)
+      for nodeIndex <- 0..length(node_list) - 1 do
+        Test.Node.testCheckBalance(Enum.at(node_list, nodeIndex))
+      end
+      IO.puts "\n"
+      loop(node_list)
+    end
 end
 
 defmodule Test.Alg do

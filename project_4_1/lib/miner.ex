@@ -19,7 +19,7 @@ defmodule BitNode.Miner do
 	def handle_call(:stop, from, state) do
 		{state, res} = 
 			if Map.get(state, :working) do
-				IO.puts "stopped"
+				#IO.puts "stopped"
 				{Map.replace!(state, :enable_work, false), true}
 			else
 				{state, false}
@@ -51,7 +51,7 @@ defmodule BitNode.Miner do
 						GenServer.cast(self(), {:mine, block_server, txs, diff_target, miner_hash, prev_block_hash, pid, newer_block})
 						state
 					else
-						IO.puts "mining succeed"
+						#IO.puts "Mining succeed"
 						GenServer.cast(pid, {:new_block, newer_block, prev_block_hash})
 						GenServer.cast(pid, {:broadcast, {:new_block, newer_block, prev_block_hash}})
 						state = Map.replace!(state, :working, false)
