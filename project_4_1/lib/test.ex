@@ -58,6 +58,8 @@ defmodule Test.Node do
       receiver = Enum.at(node_list, Enum.random(0..length(node_list) - 1))
       amount = :rand.uniform() * 10 |> Float.round(2)
       trans_fee = amount * :rand.uniform() |> Float.round(2)
+      IO.puts "Transaction from " <> inspect(sender) <> " to " <> inspect(receiver) <> ": "
+      IO.puts "Amount: " <> inspect(amount) <> ", transaction fee: " <> inspect(trans_fee)
       GenServer.cast(sender, {:ask_transaction, receiver, amount, trans_fee})
     end
 

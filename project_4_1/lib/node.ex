@@ -155,11 +155,15 @@ defmodule BitNode do
 						GenServer.cast(Map.get(state, :current_miner), :initialize)
 					end
 					res = Alg.appendBlock(Map.get(state, :block_server), block)
-					GenServer.cast(Map.get(state, :queue), {:set_prev_transaction, Enum.at(block.trans, 0)})
+					#GenServer.cast(Map.get(state, :queue), {:set_prev_transaction, Enum.at(block.trans, 0)})
 					#state = Map.replace!(state, :prev_transaction, Enum.at(block.trans, 0))
 					GenServer.cast(self(), :start_mining)
 					state
+				else
+					state
 				end
+			state
+		else
 			state
 		end
 		#IO.inspect Alg.hashBlock(Alg.getTailBlock(Map.get(state, :block_server)))

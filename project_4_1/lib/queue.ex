@@ -87,8 +87,9 @@ defmodule BitNode.Queue do
 					if Alg.verifyTransaction(sign, sender_public_key, prev_hash, receiver_public_key) do
 						new_txs = Map.get(state, :txs) ++ [new_tx]
 						state = Map.replace!(state, :txs, new_txs)
-						state
+						state = Map.replace!(state, :prev_transaction, new_tx)
 					else
+						IO.puts "x"
 						state
 					end
 				state
