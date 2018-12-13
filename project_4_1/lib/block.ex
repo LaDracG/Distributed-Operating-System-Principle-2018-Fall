@@ -13,12 +13,13 @@ defmodule BlockChain do
     {:ok, state}
   end
 
-  def start() do
+  def start(f \\ false) do
     {:ok, pid} = GenServer.start_link(
                         __MODULE__,
                         %{
                             :tail => nil,
-                            :block_table => %{}
+                            :block_table => %{},
+                            :first? => f
                         }
                     )
     pid

@@ -12,6 +12,7 @@ defmodule BitNode do
 		state = Map.replace!(state, :nodes, new_nodes)
 		state = Map.replace!(state, :r_nodes, new_r_nodes)
 		broadcast({:new_node, self(), public_key})
+		GenServer.cast(Map.get(state, :queue), {:set_master, self()})
 		{:ok, state}
 	end
 
@@ -19,12 +20,12 @@ defmodule BitNode do
 		{:ok, pid} = GenServer.start_link(
 						__MODULE__,
 						%{
-							:queue => BitNode.Queue.start(self()),
+							:queue => BitNode.Queue.start(first?),
 							:public_key => nil, #hex string
 							:private_key => nil, #hex string
 							:nodes => %{}, #pid => public key
 							:r_nodes => %{}, #public key => pid
-							:block_server => BlockChain.start(),
+							:block_server => BlockChain.start(first?),
 							:initialized => if first? do
 												true
 											else
@@ -155,8 +156,9 @@ defmodule BitNode do
 						GenServer.cast(Map.get(state, :current_miner), :initialize)
 					end
 					res = Alg.appendBlock(Map.get(state, :block_server), block)
-					#GenServer.cast(Map.get(state, :queue), {:set_prev_transaction, Enum.at(block.trans, 0)})
-					#state = Map.replace!(state, :prev_transaction, Enum.at(block.trans, 0))
+					new_balance = Alg.getBalance(Map.get(state, :public_key), Map.get(state, :block_server))
+					post_body = "{\"msg\":\"balance\",\"pid\":\"" <> inspect(self()) <> "\",\"amount\":" <> inspect(new_balance) <> "}"
+					HTTPoison.request(:post, "http://127.0.0.1:4000", post_body, [{"Content-Type", "application/json"}])
 					GenServer.cast(self(), :start_mining)
 					state
 				else
