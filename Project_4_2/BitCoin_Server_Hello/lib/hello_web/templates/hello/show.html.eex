@@ -1,0 +1,4 @@
+<div class="phx-hero">
+  <h2>Hello World, from <%= @messenger %>!</h2>
+  <meta http-equiv="refresh" content="200">
+</div>

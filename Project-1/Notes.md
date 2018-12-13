@@ -78,3 +78,4 @@ For example, if A \<-\> B, and there is a process a on A, process b on B. If we 
 
 (6) Make work unit larger when using remote nodes since the bottleneck is networking communication speed now. So we should pass more data in each transporting.
 
+(7) Remember to start "epmd" on all nodes first before starting your program on distributed nodes.
