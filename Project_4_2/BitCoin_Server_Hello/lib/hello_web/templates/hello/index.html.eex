@@ -1,4 +1,365 @@
-<div class="phx-hero">
-  <h2>Hello World, from <%= @messenger %>!</h2>
-  <meta http-equiv="refresh" content="200">
-</div>
+
+<html>
+    <head>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.bundle.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.bundle.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.3/Chart.min.js"></script>
+        <script src="https://www.chartjs.org/samples/latest/utils.js"></script>
+        <link rel="stylesheet" type="text/css" href="https://www.chartjs.org/samples/latest/style.css">
+    </head>
+    <body>
+    <div class="content">
+    <div class="wrapper" >
+        <canvas id="myChart" width="200" height="200"></canvas>
+        <div id="starbox"></div>
+    </div>
+    </div>
+    <style>
+    #starbox{
+    z-index: -1;
+    margin: 0 auto;
+    position: absolute;
+    background: transparent;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+/*画出流星的形状*/
+.star{
+    display: block;
+    opacity: 0;
+    position: relative;
+    left: 90%;
+    width: 1px;
+    background: transparent;
+    /*流星动画*/
+    animation: star-fall 3s linear; /*infinite;*/
+}
+/*流星后面的尾巴*/
+.star:after{
+    content: ' ';
+    display: block;
+    background: black;
+    border: 1px solid #fff;
+    border-width: 0px 0px 2px 50px;
+    left:5px;
+    transform: rotate(var(--tail-angle));
+    border-color:transparent transparent transparent #eee;
+}
+/*创建动画，实现流星划过、渐入渐隐的效果*/
+@keyframes star-fall{
+    0%{
+        opacity: 0;
+        transform: scale(0.5) translate3d(0,0);
+    }
+    50%{
+        opacity: 1;
+        transform: translate3d(var(--delta-x-0), var(--delta-y-0), 0);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.2) translate3d(var(--delta-x-1), var(--delta-y-1), 0);
+    }
+}
+    </style>
+    <script>
+
+        //console.log(<%= @n_nodes %>);
+        var num_nodes = <%= @n_nodes %>;
+
+        var PI = 3.141592653;
+
+        var DATA_COUNT = 16;
+        var MIN_XY = -150;
+        var MAX_XY = 100;
+        var MAX_R = 30;
+        var MIN_R = 5;
+        var MAX_V = 700;
+        var MIN_V = 1000;
+
+        var utils = Samples.utils;
+
+        utils.srand(250);
+
+        function colorize(opaque, context) {
+            var value = context.dataset.data[context.dataIndex];
+            var x = value.x / 100;
+            var y = value.y / 100;
+            var r = x < 0 && y < 0 ? 250 : x < 0 ? 150 : y < 0 ? 50 : 0;
+            var g = x < 0 && y < 0 ? 0 : x < 0 ? 50 : y < 0 ? 150 : 250;
+            var b = x < 0 && y < 0 ? 0 : x > 0 && y > 0 ? 250 : 150;
+            var a = opaque ? 1 : 0.5 * value.v / 1000;
+
+            return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+        }
+
+        function myColorize(x, y, v, opaque){
+            var r = x < 0 && y < 0 ? 250 : x < 0 ? 150 : y < 0 ? 50 : 0;
+            var g = x < 0 && y < 0 ? 0 : x < 0 ? 50 : y < 0 ? 150 : 250;
+            var b = x < 0 && y < 0 ? 0 : x > 0 && y > 0 ? 250 : 150;
+            var a = opaque ? 1 : 0.5 * v / 1000;
+            return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
+        }
+
+        function generateData() {
+            var data = [];
+            for (var i = 0; i < DATA_COUNT; ++i) {
+                data.push({
+                    x: utils.rand(MIN_XY, MAX_XY),
+                    y: utils.rand(MIN_XY, MAX_XY),
+                    r: utils.rand(MIN_R, MAX_R),
+                    v: utils.rand(MIN_V, MAX_V)
+                });
+            }
+            return data;
+        };
+
+        function generateOneDataPoint(balance) {
+            return {
+                    x: utils.rand(MIN_XY, MAX_XY),
+                    y: utils.rand(MIN_XY, MAX_XY),
+                    //r: utils.rand(MIN_R, MAX_R),
+                    r: Math.max(Math.sqrt(balance), MIN_R),
+                    v: utils.rand(MIN_V, MAX_V)
+                };
+        };
+
+        var options = {
+            aspectRatio: 1,
+            legend: false,
+            tooltips: false,
+
+            elements: {
+                point: {
+                    backgroundColor: colorize.bind(null, false),
+
+                    borderColor: colorize.bind(null, true),
+
+                    borderWidth: function(context) {
+                        return Math.min(Math.max(1, context.datasetIndex + 1), 8);
+                    },
+
+                    hoverBackgroundColor: 'transparent',
+
+                    hoverBorderColor: function(context) {
+                        return utils.color(context.datasetIndex);
+                    },
+
+                    hoverBorderWidth: function(context) {
+                        var value = context.dataset.data[context.dataIndex];
+                        return Math.round(8 * value.v / 1000);
+                    },
+
+                    radius: function(context) {
+                        var value = context.dataset.data[context.dataIndex];
+                        var size = context.chart.width;
+                        var base = Math.abs(value.v) / 1000;
+                        return (size / 24) * base;
+                    }
+                }
+            }
+        };
+
+        // eslint-disable-next-line no-unused-vars
+        function randomize() {
+            chart.data.datasets.forEach(function(dataset) {
+                dataset.data = generateData();
+            });
+            chart.update();
+        }
+
+        // eslint-disable-next-line no-unused-vars
+        function addDataset() {
+            chart.data.datasets.push({
+                data: generateData()
+            });
+            chart.update();
+        }
+
+        // eslint-disable-next-line no-unused-vars
+        function removeDataset() {
+            chart.data.datasets.shift();
+            chart.update();
+        }
+
+        /*
+        var data = {
+            datasets: [{
+                data: generateData()
+            }, {
+                data: generateData()
+            }]
+        };
+        */
+
+        console.log("<%= @pids %>");
+
+        var balances = "<%= @balances %>".split(" ");
+        var pids = "<%= @pids %>".split(" ");
+        var senders = "<%= @senders %>".split(" ");
+        var receivers = "<%= @receivers %>".split(" ");
+        var amounts = "<%= @amounts %>".split(" ");
+        
+        balances.pop();
+        pids.pop();
+        senders.pop();
+        receivers.pop();
+        amounts.pop();
+        console.log(pids);
+        console.log(senders);
+        console.log(receivers);
+        //console.log(balances);
+
+        datasets = [];
+        for (var i=0; i<num_nodes; i++){
+            //var balance = Math.floor(utils.rand(0, 1000));
+            var point = generateOneDataPoint(balances[i]);
+            datasets.push({
+                    "label": pids[i], //"Node-" + (i).toString(),
+                    "data":[point],
+                    "backgroundColor":myColorize(point.x, point.y, point.v, false),
+                    "balance": balances[i]
+                }
+            )
+        }
+
+        Chart.plugins.register({
+            afterDatasetsDraw: function(chart) {
+                var ctx = chart.ctx;
+                chart.data.datasets.forEach(function(dataset, i) {
+                    var meta = chart.getDatasetMeta(i);
+                    if (!meta.hidden) {
+                        meta.data.forEach(function(element, index) {
+                            // Draw the text in black, with the specified font
+                            ctx.fillStyle = 'rgb(0, 0, 0)';
+                            var fontSize = 14;
+                            var fontStyle = 'normal';
+                            var fontFamily = 'Comic Sans MS';
+                            ctx.font = Chart.helpers.fontString(fontSize, fontStyle, fontFamily);
+                            // Just naively convert to string for now
+                            //console.log(dataset);
+                            var dataString = dataset.balance.toString();
+                            // Make sure alignment settings are correct
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'top';
+                            var padding = 5;
+                            var position = element.tooltipPosition();
+                            ctx.fillText(dataString, position.x, position.y - (fontSize / 2) - padding);
+                        });
+                    }
+                });
+            }
+        });
+
+        var ctx = document.getElementById("myChart");
+        var chart = new Chart(ctx,
+            {
+                type:"bubble",
+                data:
+                    {"datasets":
+                            datasets
+                            /*
+                            [
+
+                                {
+                                    "label":"First Dataset",
+                                    "data":[{"x":20,"y":30,"r":15}],
+                                    "backgroundColor":"rgb(255, 99, 132)"
+                                },
+                                {
+                                    "label":"Second Dataset",
+                                    "data":[{"x":40,"y":10,"r":10}],
+                                    "backgroundColor":"rgb(99, 255, 132)"
+                                }
+
+                            ]
+                            */
+                    },
+                options: {
+                    animation: {
+                        duration: 0
+                    }
+                }
+            }
+        );
+
+        function transaction(chart, start_point_idx, end_point_idx) {
+            var start_point_meta = chart.getDatasetMeta(start_point_idx);
+            var start_point_x = start_point_meta.data[0]._model.x;
+            var start_point_y = start_point_meta.data[0]._model.y;
+
+            var end_point_meta = chart.getDatasetMeta(end_point_idx);
+            var end_point_x = end_point_meta.data[0]._model.x;
+            var end_point_y = end_point_meta.data[0]._model.y;
+
+            var delta_x = end_point_x - start_point_x;
+            var delta_y = end_point_y - start_point_y;
+
+            var ratio = 3;
+            var delta_x_0 = (ratio / (ratio + 1.0)) * delta_x;
+            var delta_x_1 = (1.0 / (ratio + 1.0)) * delta_x;
+            var delta_y_0 = (ratio / (ratio + 1.0)) * delta_y;
+            var delta_y_1 = (1.0 / (ratio + 1.0)) * delta_y;
+
+            var add_180 = 0;
+            
+            if (delta_x < 0){
+                add_180 = 180;
+            }
+            else{
+                add_180 = 0;
+            }
+
+            var x_shift = -30;
+            let newStar = document.createElement('div');
+            newStar.className = "star";
+            newStar.style.top = start_point_y; //randomNumber(myheight*.3, -myheight*.2) + 'px';
+            newStar.style.left = start_point_x + x_shift; //randomNumber(mywidth*1.3, 0) + 'px';
+            starbox.appendChild(newStar);
+
+            document.querySelector('.star').style.setProperty('--delta-x-0',delta_x_0 + 'px');
+            document.querySelector('.star').style.setProperty('--delta-y-0',delta_y_0 + 'px');
+            document.querySelector('.star').style.setProperty('--delta-x-1',delta_x + 'px');
+            document.querySelector('.star').style.setProperty('--delta-y-1',delta_y + 'px');
+            //alert(Math.atan(-1) / PI * 180);
+            document.querySelector('.star').style.setProperty('--tail-angle', add_180 + Math.atan(delta_y / delta_x) / PI * 180 + 'deg');
+
+        }
+
+
+        function randomNumber (max, min) {
+            let randomnum = Math.floor(Math.random() * (max - min + 1) + min)
+            return randomnum
+        }
+        var mywidth = document.documentElement.clientWidth;  //获取当前可视宽度
+        var myheight = document.documentElement.clientHeight;  //获取当前可视高度
+
+        var starbox = document.getElementById('starbox');
+        var canvas = document.getElementById("myChart");
+        starbox.style.left = canvas.style.left;
+        starbox.style.right = canvas.style.right;
+        starbox.style.top = canvas.style.top;
+        starbox.style.bottom = canvas.style.bottom;
+        starbox.style.width = canvas.style.width;
+        starbox.style.height = canvas.style.height;
+
+        //for(let i = 0;i<45;i++){
+        //}
+        for (var i=0; i<senders.length; i++){
+            console.log(pids.indexOf(senders[i]));
+            console.log(pids.indexOf(receivers[i]));
+            if (pids.indexOf(senders[i]) == pids.indexOf(receivers[i])){
+                continue;
+            }
+            else{
+                setTimeout(
+                    transaction(chart, pids.indexOf(senders[i]), pids.indexOf(receivers[i])), 500
+                );
+            }
+        }
+    </script>
+    </body>
+    <meta http-equiv="refresh" content="5">
+</html> 

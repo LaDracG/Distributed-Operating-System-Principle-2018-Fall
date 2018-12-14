@@ -23,7 +23,6 @@ defmodule HelloWeb.Router do
     #get "/", PageController, :index
 
     get "/", HelloController, :index
-    #get "/hello", HelloController, :show
     post "/", HelloController, :renew
   end
 
