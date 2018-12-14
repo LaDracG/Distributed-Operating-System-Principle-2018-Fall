@@ -26,7 +26,7 @@
     right: 0;
     bottom: 0;
 }
-/*画出流星的形状*/
+
 .star{
     display: block;
     opacity: 0;
@@ -34,10 +34,8 @@
     left: 90%;
     width: 1px;
     background: transparent;
-    /*流星动画*/
-    animation: star-fall 3s linear; /*infinite;*/
+    animation: star-fall 2s linear; /*infinite;*/
 }
-/*流星后面的尾巴*/
 .star:after{
     content: ' ';
     display: block;
@@ -48,7 +46,6 @@
     transform: rotate(var(--tail-angle));
     border-color:transparent transparent transparent #eee;
 }
-/*创建动画，实现流星划过、渐入渐隐的效果*/
 @keyframes star-fall{
     0%{
         opacity: 0;
@@ -280,6 +277,12 @@
                 options: {
                     animation: {
                         duration: 0
+                    },
+                    legend: {
+                        display: false
+                    },
+                    tooltips:{
+                        enabled: false
                     }
                 }
             }
@@ -354,12 +357,12 @@
                 continue;
             }
             else{
-                setTimeout(
-                    transaction(chart, pids.indexOf(senders[i]), pids.indexOf(receivers[i])), 500
-                );
+                //setTimeout(
+                transaction(chart, pids.indexOf(senders[i]), pids.indexOf(receivers[i]));//, 500
+                //);
             }
         }
     </script>
     </body>
-    <meta http-equiv="refresh" content="5">
+    <meta http-equiv="refresh" content="2">
 </html> 

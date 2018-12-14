@@ -26,6 +26,17 @@ defmodule BitNode.Queue do
 		{:noreply, state}
 	end
 
+	def handle_cast({:initialize_r_nodes, r_nodes}, state) do
+		state = Map.replace!(state, :r_nodes, r_nodes)
+		{:noreply, state}
+	end
+
+	def handle_cast({:update_r_nodes, public_key, pid}, state) do
+		new_r_nodes = Map.put(Map.get(state, :r_nodes), public_key, pid)
+		state = Map.replace!(state, :r_nodes, new_r_nodes)
+		{:noreply, state}
+	end
+
 	def handle_cast({:set_master, master}, state) do
 		state = Map.replace!(state, :master, master)
 		{:noreply, state}
@@ -96,8 +107,10 @@ defmodule BitNode.Queue do
 						state = Map.replace!(state, :txs, new_txs)
 						state = Map.replace!(state, :prev_transaction, new_tx)
 						if Map.get(state, :first?) do
-							sender_pid = GenServer.call(Map.get(state, :master), {:getPid, sender_public_key})
-							receiver_pid = GenServer.call(Map.get(state, :master), {:getPid, receiver_public_key})
+							sender_pid = Map.get(Map.get(state, :r_nodes), sender_public_key)
+							receiver_pid = Map.get(Map.get(state, :r_nodes), receiver_public_key)
+							#sender_pid = GenServer.call(Map.get(state, :master), {:getPid, sender_public_key})
+							#receiver_pid = GenServer.call(Map.get(state, :master), {:getPid, receiver_public_key})
 							amount = Enum.at(new_tx.outputs, 0).value
 							post_body = "{\"msg\":\"transaction\",\"sender\":\"" <> inspect(sender_pid) 
 										<> "\",\"receiver\":\"" <> inspect(receiver_pid) <> "\",\"amount\":" 
@@ -106,7 +119,7 @@ defmodule BitNode.Queue do
 						end
 						state
 					else
-						IO.puts "x"
+						#IO.puts "x"
 						state
 					end
 				state

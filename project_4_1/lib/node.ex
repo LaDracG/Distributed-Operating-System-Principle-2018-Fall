@@ -9,6 +9,7 @@ defmodule BitNode do
 		state = Map.replace!(state, :private_key, private_key)
 		new_nodes = Map.put(Map.get(state, :nodes), self(), public_key)
 		new_r_nodes = Map.put(Map.get(state, :r_nodes), public_key, self())
+		GenServer.cast(Map.get(state, :queue), {:initialize_r_nodes, new_r_nodes})
 		state = Map.replace!(state, :nodes, new_nodes)
 		state = Map.replace!(state, :r_nodes, new_r_nodes)
 		broadcast({:new_node, self(), public_key})
@@ -82,11 +83,20 @@ defmodule BitNode do
 			if !Map.get(state, :initialized) do
 				state = Map.replace!(state, :nodes, nodes)
 				state = Map.replace!(state, :r_nodes, r_nodes)
+				GenServer.cast(Map.get(state, :queue), {:initialize_r_nodes, r_nodes})
 				#state = Map.replace!(state, :prev_transaction, prev_transaction)
 				GenServer.cast(Map.get(state, :block_server), {:initialize, block_table, tail})
 				GenServer.cast(Map.get(state, :queue), {:set_txs, txs})
 				GenServer.cast(Map.get(state, :queue), {:set_queue, queue})
 				GenServer.cast(Map.get(state, :queue), {:set_prev_transaction, prev_transaction})
+
+				#blockchain_pid = Map.get(state, :block_server)
+				#public_key = Map.get(state, :public_key)
+				#b = Alg.generateBlock(blockchain_pid, [], 0, 0, public_key, 25, "")
+				#prev_block_hash = Alg.hashBlock(Alg.getTailBlock(Map.get(state, :block_server)))
+				#GenServer.cast(self(), {:new_block, b, prev_block_hash})
+				#broadcast({:new_block, b, prev_block_hash})
+
 				state = Map.replace!(state, :initialized, true)
 				state
 			else
@@ -179,7 +189,8 @@ defmodule BitNode do
 				new_r_nodes = Map.put(Map.get(state, :r_nodes), public_key, pid)
 				state = Map.replace!(state, :nodes, new_nodes)
 				state = Map.replace!(state, :r_nodes, new_r_nodes)
-				prev_transaction = GenServer.call(Map.get(state, :queue), :get_prev_transaction)
+				GenServer.cast(Map.get(state, :queue), {:update_r_nodes, public_key, pid})
+				prev_transaction = GenServer.call(Map.get(state, :queue), :get_prev_transaction, 10000)
 				block_server = Map.get(state, :block_server)
 				txs = GenServer.call(Map.get(state, :queue), :get_txs)
 				queue = GenServer.call(Map.get(state, :queue), :get_queue)

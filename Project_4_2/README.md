@@ -1,18 +1,18 @@
 #Project 4.2
 
-##Team Members
+###Team Members
 Jingyang Guo: 01616106
 
 Yifan Wang: 40166989
 
-##Dependencies
+###Dependencies
 - Elixir
 - Phoenix
 - PostgreSQL
 - HTTPoison 1.0
 - Chart.js
 
-##Configuration
+###Configuration
 1. Configure database tables:
   With PostgreSQL service on, run `code here`
 2. Update database and schema:
@@ -67,7 +67,7 @@ We tested on at most 100 nodes. It worked well.
 
 **5. Mining a block normally**
 
-(1) This is for testing mining in normal case.
+(1) This is for testing mining in normal case, we tested it along with testcase 1.
 
 (2) We start two nodes and ask one of them to start a transaction to another one. Then we check the block chain after one block is mined.
 

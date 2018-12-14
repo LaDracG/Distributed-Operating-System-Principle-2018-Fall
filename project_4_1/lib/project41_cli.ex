@@ -1,10 +1,5 @@
 defmodule Project41.CLI do
   def main(args \\ []) do
-    '''
-    post_body = "hello!"
-    rep = HTTPoison.request(:post, "http://127.0.0.1:4000", post_body, [])
-    #IO.inspect rep
-    '''
     IO.puts "Start testing algorithms: \n\n"
     Test.testAlg()
 
@@ -12,7 +7,8 @@ defmodule Project41.CLI do
     IO.puts "Start testing bitcoin functions: \n\n"
     Test.testBitCoin()
     
-    #testChain()
+    #Test.testNormalTransaction()
+    #Test.testInsufficientBalance()
   end
 
 

@@ -87,13 +87,53 @@ defmodule Alg do
   end
 
   def signTransaction(sender_private_key, prev_trans_hash, receiver_public_key) do
-    hash = hashString(:sha256, prev_trans_hash<>receiver_public_key, 2)
-    generateSignature(sender_private_key, hash)
+    #IO.puts prev_trans_hash
+    #IO.puts prev_trans_hash<>receiver_public_key
+    '''
+    prev_trans_hash = 
+      if prev_trans_hash == nil do
+        "nil"
+      else
+        prev_trans_hash
+      end
+    receiver_public_key = 
+      if receiver_public_key == nil do
+        "nil"
+      else
+        receiver_public_key
+      end
+    '''
+    try do
+      hash = hashString(:sha256, prev_trans_hash<>receiver_public_key, 2)
+      generateSignature(sender_private_key, hash)
+    rescue
+      e in RuntimeError -> e
+      generateSignature(sender_private_key, "hash")
+    end
   end
 
   def verifyTransaction(signature, sender_public_key, prev_trans_hash, receiver_public_key) do
-    hash = hashString(:sha256, prev_trans_hash<>receiver_public_key, 2)
-    verifySignature(signature, sender_public_key, hash)
+    '''
+    prev_trans_hash = 
+      if prev_trans_hash == nil do
+        "nil"
+      else
+        prev_trans_hash
+      end
+    receiver_public_key = 
+      if receiver_public_key == nil do
+        "nil"
+      else
+        receiver_public_key
+      end
+    '''
+    try do
+      hash = hashString(:sha256, prev_trans_hash<>receiver_public_key, 2)
+      verifySignature(signature, sender_public_key, hash)
+    rescue
+      e in RuntimeError -> e
+      false
+    end
   end
 
   def getAllTransFee(transactions, res) do

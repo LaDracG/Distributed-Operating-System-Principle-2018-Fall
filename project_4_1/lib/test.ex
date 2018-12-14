@@ -12,8 +12,34 @@ defmodule Test do
   end
 
   def testBitCoin() do
-    node_list = Test.Node.testStartNode(3)
+    node_list = Test.Node.testStartNode(100)
     Test.Node.loop(node_list)
+  end
+
+  def testNormalTransaction() do
+    node_list = Test.Node.testStartNode(2)
+    sender = Enum.at(node_list, 0)
+    receiver = Enum.at(node_list, 1)
+    IO.puts "Before Transaction:"
+    IO.puts "sender balance:  " <> inspect(Test.Node.testCheckBalance(sender)) <> ", receiver balance: " <> inspect(Test.Node.testCheckBalance(receiver))
+    amount = 10
+    trans_fee = 2
+    :timer.sleep(50)
+    GenServer.cast(sender, {:ask_transaction, receiver, amount, trans_fee})
+    IO.puts "After. Transaction:"
+    Test.Node.testNormalLoop(sender, receiver)
+  end
+
+  def testInsufficientBalance() do
+    node_list = Test.Node.testStartNode(2)
+    sender = Enum.at(node_list, 0)
+    receiver = Enum.at(node_list, 1)
+    IO.puts "Before Transaction:"
+    IO.puts "sender balance:  " <> inspect(Test.Node.testCheckBalance(sender)) <> ", receiver balance: " <> inspect(Test.Node.testCheckBalance(receiver))
+    amount = 30
+    trans_fee = 2
+    GenServer.cast(sender, {:ask_transaction, receiver, amount, trans_fee})
+    :timer.sleep(100)
   end
 end
 
@@ -43,6 +69,7 @@ defmodule Test.Node do
       node_list = 
         if nodenum >= 2 do
             for _ <- 2..nodenum do
+              :timer.sleep(50) #leave some time to sync information
               BitNode.start()
             end
         end
@@ -54,7 +81,12 @@ defmodule Test.Node do
 
     # start a transaction with random sender, receiver, transaction amount and transaction fee
     def testRandomTransaction(node_list) do
-      sender = Enum.at(node_list, Enum.random(0..length(node_list) - 1))
+      sender = 
+        if :rand.uniform() < 0.2 do
+          Enum.at(node_list, 0)
+        else
+          Enum.at(node_list, Enum.random(0..length(node_list) - 1))
+        end
       receiver = Enum.at(node_list, Enum.random(0..length(node_list) - 1))
       amount = :rand.uniform() * 10 |> Float.round(2)
       trans_fee = amount * :rand.uniform() |> Float.round(2)
@@ -63,12 +95,12 @@ defmodule Test.Node do
       GenServer.cast(sender, {:ask_transaction, receiver, amount, trans_fee})
     end
 
-    # print the balance of a node
+    # return the balance of a node
     def testCheckBalance(pid) do
       public_key = GenServer.call(pid, :public_key)
       blockchain_pid = GenServer.call(pid, :blockchain_pid)
-      IO.puts inspect(pid) <> " balance: "
-      IO.puts inspect Alg.getBalance(public_key, blockchain_pid)
+      #IO.puts inspect(pid) <> " balance: "
+      Alg.getBalance(public_key, blockchain_pid)
     end
 
     # print the blockchain stored in a node
@@ -81,14 +113,23 @@ defmodule Test.Node do
     # start a random transaction every 1.5s, and check each node's current balance
     # transaction may fail, when transaction amount is larger than sender's balance
     def loop(node_list) do
-      :timer.sleep(1500)
+      :timer.sleep(2000)
       Test.Node.testRandomTransaction(node_list)
-      for nodeIndex <- 0..length(node_list) - 1 do
-        Test.Node.testCheckBalance(Enum.at(node_list, nodeIndex))
-      end
-      IO.puts "\n"
+      
+      #for nodeIndex <- 0..length(node_list) - 1 do
+      #  Test.Node.testCheckBalance(Enum.at(node_list, nodeIndex))
+      #end
+      #IO.puts "\n"
       loop(node_list)
     end
+
+    def testNormalLoop(sender, receiver) do
+      :timer.sleep(2000)
+      IO.puts "sender balance:  " <> inspect(Test.Node.testCheckBalance(sender)) <> ", receiver balance: " <> inspect(Test.Node.testCheckBalance(receiver))
+      testNormalLoop(sender, receiver)
+    end
+
+    def test
 end
 
 defmodule Test.Alg do
