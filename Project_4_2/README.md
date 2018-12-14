@@ -1,10 +1,5 @@
 #Project 4.2
 
-###Team Members
-Jingyang Guo: 01616106
-
-Yifan Wang: 40166989
-
 ###Dependencies
 - Elixir
 - Phoenix
